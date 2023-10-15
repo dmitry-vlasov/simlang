@@ -5,7 +5,7 @@ import text/blueprint;
 
 runTest(file: string, err: bool) -> bool {
 	out = execSystemProcessOutput("java", [
-		"-jar", "simlang.jar", "exec=" + file, "show-all=1",
+		"-jar", "simlang.jar", "file=" + file, "show-all=1",
 		"in=5,5,5,5"
 	], ".");
 	if (isUrlParameterTrue("show-out")) {

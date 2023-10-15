@@ -107,10 +107,16 @@ doProg2bc(s: TExp, var_ind: (string) -> int, err: Err) -> [BcComm] {
 	}
 }
 
+
+// This function makes a conversion of a tree-like AST nodes of an expression
+// to the RPN-like (Reverse Polish Notation) sequence of commands, which operate
+// on the stack of the execution engine.
 doExp2bc(e: TExp, var_ind: (string) -> int, err: Err) -> [BcComm] {
 	switch (e) {
 		TCall(op, args,__): {
 			arrayPush(
+				// Note! here arguments are reversed (i.e. foldr function is used).
+				// Otherwise the order of oerations will be reversed during the execution.
 				foldr(args, [], \acc, arg -> concat(acc, doExp2bc(arg, var_ind, err))),
 				BcOp(op, length(args))
 			);

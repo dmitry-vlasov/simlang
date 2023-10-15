@@ -2,7 +2,11 @@ import type;
 
 export {
 
-BcComm ::= BcPush, BcPop, BcPrint, BcReadBool, BcReadInt, BcReadString, BcIf, BcGoto, BcOp, BcConstBool, BcConstInt, BcConstString;
+// Bytecode commands
+BcComm ::=
+	BcPush, BcPop, BcPrint, BcReadBool, BcReadInt, BcReadString, BcIf,
+	BcGoto, BcOp, BcConstBool, BcConstInt, BcConstString;
+
 	// stack <-> locals operations
 	BcPush(i: int);
 	BcPop(i: int);
@@ -25,9 +29,10 @@ BcComm ::= BcPush, BcPop, BcPrint, BcReadBool, BcReadInt, BcReadString, BcIf, Bc
 	BcConstInt(v: int);
 	BcConstString(s: string);
 
+// The whole bytecode representation
 BcCode(
 	locals: int,    // number of local variables, used in a program
-	code: [BcComm],
+	code: [BcComm], // sequence of commands
 );
 
 }
