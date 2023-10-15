@@ -2,7 +2,7 @@ import type;
 
 export {
 
-// Typed version of Exp structs. Some structs have explicit types.
+// Typed version of Exp structs. Some structs (namely expressions) have explicit types.
 
 TExp ::= TAssign, TIf, TWhile, TSeq, TCall, TArray, TPrint, TRead, TVar, TInt, TBool, TString;
 	TAssign(var : string, e: TExp);
