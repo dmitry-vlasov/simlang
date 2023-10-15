@@ -1,5 +1,5 @@
 {
-	let a = "abc"
+	a = "abc"
 	print a
 	print a + "_xyz"
 }

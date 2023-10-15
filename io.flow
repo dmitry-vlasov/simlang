@@ -1,0 +1,7 @@
+export {
+	// General input/otput gates of the execution engine
+	Io(
+		in: () -> string,
+		out: (string) -> void
+	);
+}

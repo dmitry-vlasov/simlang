@@ -28,12 +28,6 @@ prog2bc(prog: TExp, err: Err) -> Maybe<BcCode> {
 
 doProg2bc(s: TExp, var_ind: (string) -> int, err: Err) -> [BcComm] {
 	switch (s) {
-		TLet(v, __, e): {
-			arrayPush(
-				doExp2bc(e, var_ind, err),
-				BcPop(var_ind(v))
-			);
-		}
 		TAssign(v, e): {
 			arrayPush(
 				doExp2bc(e, var_ind, err),

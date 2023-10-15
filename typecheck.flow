@@ -16,33 +16,12 @@ typecheck(prog: Exp, err: Err) -> Maybe<TExp> {
 typeStat(s: Exp, locals: Tree<string, Type>, err: Err) -> Maybe<Pair<TExp, Tree<string, Type>>> {
 	e2t = \x -> typeExp(x, locals, err);
 	switch (s) {
-		Let(v, e): {
-			if (containsKeyTree(locals, v)) {
-				err.report("var `" + v + "` is already declared");
-				None();
-			} else {
-				maybeMap(e2t(e), \t_e -> {
-					// Add a type of `v` to the locals tree
-					v_type = expType(t_e);
-					new_locals = setTree(locals, v, v_type);
-					Pair(TLet(v, v_type, t_e), new_locals);
-				});
-			}
-		}
 		Assign(v, e): {
-			if (!containsKeyTree(locals, v)) {
-				err.report("var `" + v + "` is not declared in: " + exp2s(s));
-				None();
-			} else {
-				maybeBind(e2t(e), \t_e -> {
-					if (lookupTreeDef(locals, v, TypeErr()) == expType(t_e)) {
-						// Type of variable coincides with the infered type of expression - ok
-						Some(Pair(TAssign(v, t_e), locals));
-					} else {
-						None();
-					}
-				});
-			}
+			maybeBind(e2t(e), \t_e -> {
+				v_type = expType(t_e);
+				new_locals = setTree(locals, v, v_type);
+				Some(Pair(TAssign(v, t_e), new_locals));
+			});
 		}
 		If(c, pos, neg): {
 			maybeBind(e2t(c), \t_c ->

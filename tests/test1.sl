@@ -1,6 +1,6 @@
 {
-	let a = 5
-	let b = 4 + a
+	a = 5
+	b = 4 + a
 	print a
 	print b
 }

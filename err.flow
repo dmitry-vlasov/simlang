@@ -1,6 +1,8 @@
 import runtime;
 
 export {
+	// General error-handling struct.
+	// Keeps an array of all occured errors,
 	Err(
 		messages: ref [string],
 		report: (string) -> void
@@ -8,6 +10,7 @@ export {
 
 	makeErr() -> Err;
 
+	// Checks that no errors have happened yet.
 	isOk(err: Err) -> bool;
 }
 

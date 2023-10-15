@@ -1,7 +1,6 @@
 export {
 
-Exp ::= Let, Assign, If, While, Seq, Call, Array, Print, Read, Var, Int, Bool, String;
-	Let(var : string, e: Exp);
+Exp ::= Assign, If, While, Seq, Call, Array, Print, Read, Var, Int, Bool, String;
 	Assign(var : string, e: Exp);
 	If(cond: Exp, pos: Exp, neg: Exp);
 	While(cond: Exp, body: Exp);

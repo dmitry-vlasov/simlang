@@ -1,9 +1,9 @@
 {
-	let n = 0
+	n = 0
 	print "input the argument of arithmetic progression sum:"
 	read n
-	let a = 0
-	let i = 0 {
+	a = 0
+	i = 0 {
 		while i <= n { 
 			a = a + i
 			i = i + 1
