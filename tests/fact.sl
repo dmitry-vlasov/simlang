@@ -1,5 +1,6 @@
 {
 	let n = 0
+	print "input factorial argument:"
 	read n
 	let f = 1
 	let i = 1
@@ -7,5 +8,5 @@
 		f = f * i
 		i = i + 1
 	}
-	print f
+	print i2s(n) + "! = " + i2s(f)
 }

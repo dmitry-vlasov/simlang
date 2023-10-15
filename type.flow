@@ -1,0 +1,6 @@
+export {
+
+Type ::= TypeInt, TypeBool, TypeString, TypeErr;
+	TypeInt(); TypeBool(); TypeString(); TypeErr();
+
+}

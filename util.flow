@@ -1,18 +1,23 @@
 import string_utils;
 import text/blueprint;
 import exp;
+import texp;
 
 export {
 
-// Make the string representation of an expression (operation inverse to parsing)
+type2s(t: Type) -> string;
+
+// Make the string representation of a (typed) expression (operation inverse to parsing)
 exp2s(e: Exp) -> string;
+texp2s(e: TExp) -> string;
 
 // Fold an expression: collect the data in `acc` (accumulator) via
 // traversing the AST of an expression. The folding function has 3 args:
 //  1) current value of accumulator,
 //  2) expression to observe
-//  3) the set of local variables at current scope.
-foldExp(acc: ?, e: Exp, fn: (?, Exp, Set<string>) -> ?, args_first: bool) -> ?;
+//  3) the tree of local variables at current scope.
+// The `let` functions tracks the let-statements (i.e. use it for typing)
+foldExp(acc: ?, locals: Tree<string, ??>, e: Exp, fn: (?, Exp, Tree<string, ??>) -> ?, let: (Exp) -> ??, args_first: bool) -> ?;
 
 
 // Traverse an AST of expression. The observing function has 2 args:
@@ -20,12 +25,23 @@ foldExp(acc: ?, e: Exp, fn: (?, Exp, Set<string>) -> ?, args_first: bool) -> ?;
 //  2) the set of local variables at current scope.
 iterExp(e: Exp, fn: (Exp, Set<string>) -> void, args_first: bool) -> void;
 
+texpVars(acc: Set<string>, e: TExp) -> Set<string>;
+
+}
+
+type2s(t: Type) -> string {
+	switch (t) {
+		TypeBool():   "bool";
+		TypeInt():    "int";
+		TypeString(): "string";
+		TypeErr():    "<error type>";
+	}
 }
 
 exp2s(e: Exp) -> string {
 	switch (e) {
-		Let(var, def, e1): {
-			"let " + var +  " = " + exp2s(def) + "\n" + strIndent(exp2s(e1));
+		Let(var, e1, s): {
+			"let " + var +  " = " + exp2s(e1) + "\n" + strIndent(exp2s(s));
 		}
 		Assign(var, x): {
 			var +  " = " + exp2s(x);
@@ -69,35 +85,82 @@ exp2s(e: Exp) -> string {
 	}
 }
 
-foldExp(a: ?, e: Exp, fn: (?, Exp, Set<string>) -> ?, args_first: bool) -> ? {
+texp2s(e: TExp) -> string {
+	switch (e) {
+		TLet(var, tp, e1, s): {
+			"let " + var + ": " + type2s(tp) + " = " + texp2s(e1) + "\n" + strIndent(texp2s(s));
+		}
+		TAssign(var, x): {
+			var +  " = " + texp2s(x);
+		}
+		TSeq(es): {
+			if (length(es) == 1) texp2s(es[0]) else "{\n" + 
+				strIndent(superglue(es, texp2s, "\n")) + 
+			"\n}";
+		}
+		TCall(op, args,__): {
+			if (length(args) == 0) op else
+			if (length(args) == 1) {
+				op + texp2s(args[0]);
+			} else {
+				"(" + superglue(args, texp2s, " " + op + " ") + ")";
+			}
+		}
+		TWhile(cond, e1): {
+			"while " + texp2s(cond) + "\n" + strIndent(texp2s(e1));
+		}
+		TIf(cond, pos, neg): {
+			if (neg == TSeq([])) {
+				"if " + texp2s(cond) + "\n" + strIndent(texp2s(pos));
+			} else {
+				"if " + texp2s(cond) + "\n" + strIndent(texp2s(pos)) + "\nelse\n" + strIndent(texp2s(neg));
+			}
+		}
+		TArray(vals): {
+			"[" + superglue(vals, texp2s, ", ") + "]";
+		}
+		TPrint(e1): {
+			"print " + texp2s(e1);
+		}
+		TRead(v, t): {
+			"read " + v;
+		}
+		TVar(v,__): v;
+		TInt(i): i2s(i)
+		TBool(b): b2s(b);
+		TString(s): "\"" + s + "\"";
+	}
+}
+
+foldExp(a: ?, locals: Tree<string, ??>, e: Exp, fn: (?, Exp, Tree<string, ??>) -> ?, let: (Exp) -> ??, args_first: bool) -> ? {
 	doFoldExp(
-		ExpFoldAcc(a, makeSet()), e, 
+		ExpFoldAcc(a, locals), e, 
 		\x, e1 -> ExpFoldAcc(fn(x.acc, e1, x.locals), x.locals), 
-		args_first
+		let, args_first
 	).acc;
 }
 
 ExpFoldAcc(
 	acc: ?,
-	locals: Set<string>,
+	locals: Tree<string, ??>,
 );
 
-doFoldExp(acc: ExpFoldAcc, e: Exp, fn: (ExpFoldAcc, Exp) -> ExpFoldAcc, args_first: bool) -> ExpFoldAcc {
+doFoldExp(acc: ExpFoldAcc, e: Exp, fn: (ExpFoldAcc, Exp) -> ExpFoldAcc, let: (Exp) -> ??, args_first: bool) -> ExpFoldAcc {
 	do_args = \ac -> switch (e) {
 		Let(v, e1, body): {
 			doFoldExp(
 				ExpFoldAcc(
-					doFoldExp(ac, e1, fn, args_first).acc,
-					insertSet(ac.locals, v)
+					doFoldExp(ac, e1, fn, let, args_first).acc,
+					setTree(ac.locals, v, let(e1))
 				),
-				body, fn, args_first
+				body, fn, let, args_first
 			);
 		}
 		Seq(stats): {
-			fold(stats, ac, \a, x -> doFoldExp(a, x, fn, args_first));
+			fold(stats, ac, \a, x -> doFoldExp(a, x, fn, let, args_first));
 		}
 		default: {
-			ExpFoldAcc(fold(expChildren(e), ac, \a, x -> doFoldExp(a, x, fn, args_first)).acc, ac.locals);
+			ExpFoldAcc(fold(expChildren(e), ac, \a, x -> doFoldExp(a, x, fn, let, args_first)).acc, ac.locals);
 		}
 	}
 	if (args_first) {
@@ -146,5 +209,15 @@ expChildren(e: Exp) -> [Exp] {
 		Array(vals): vals;
 		Print(e1): [e1];
 		default: [];
+	}
+}
+
+texpVars(acc: Set<string>, e: TExp) -> Set<string> {
+	switch (e) {
+		TLet(v,__,__, s):  texpVars(insertSet(acc, v), s);
+		TSeq(stats):       fold(stats, acc, texpVars);
+		TWhile(__,body):   texpVars(acc, body);
+		TIf(__, pos, neg): texpVars(texpVars(acc, pos), neg);
+		default: acc;
 	}
 }

@@ -29,24 +29,17 @@ exp = exp "||" ws exp $"||"
 	)
 
 	|> (
-		//"if" ws exp exp "else" ws exp $"ifelse" 
-		//| "if" ws exp exp $"if"
-		//| "while" ws exp exp $"while"
-		//| id "=" ws exp $"assign"
-		"(" ws exp ")" ws 
-		//| "print" ws exp $"print_"
+		"(" ws exp ")" ws
 		| "true" ws $"true"
 		| "false" ws $"false"
 		| string ws $"unescape"
 		| int ws $"s2i"
 		| "[" ws exps_commas "]" ws
-		//| "{" ws exps_list "}" ws $"seq"
+		| id "(" ws exps_commas ")" ws $"call"
 		| id $"var"
 	);
 
 exps_commas = $"list" exp $"cons" ("," ws exp $"cons")* ("," ws)? | $"list";
-exps_semis = $"list" exp $"cons" (";" ws exp $"cons")* | $"list";
-exps_list = $"list" exp $"cons" (exp $"cons")* | $"list";
 
 string = $('"' onechar_* '"') ws;
 

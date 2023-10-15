@@ -1,29 +1,157 @@
 import err;
 import exp;
+import texp;
 import bc;
 import util;
 
 export {
-	typecheck(prog: Exp, err: Err) -> Maybe<Exp>;
+	// Assign types to variables and expresions.
+	typecheck(prog: Exp, err: Err) -> Maybe<TExp>;
 }
 
-typecheck(prog: Exp, err: Err) -> Maybe<Exp> {
-	// Check that all variables are declared exaclty once in each scope
-	iterExp(prog, \x, locals -> switch (x) {
-		Let(v,__,__):
-			if (containsSet(locals, v)) {
+typecheck(prog: Exp, err: Err) -> Maybe<TExp> {
+	maybeMap(typeStat(prog, makeTree(), err), \p -> p.first);
+}
+
+typeStat(s: Exp, locals: Tree<string, Type>, err: Err) -> Maybe<Pair<TExp, Tree<string, Type>>> {
+	e2t = \x -> typeExp(x, locals, err);
+	switch (s) {
+		Let(v, e, s1): {
+			if (containsKeyTree(locals, v)) {
 				err.report("var `" + v + "` is already declared");
-			}
-		Assign(v,__):
-			if (!containsSet(locals, v)) {
-				err.report("var `" + v + "` is not declared in: " + exp2s(x));
-			}
-		Var(v): {
-			if (!containsSet(locals, v)) {
-				err.report("var `" + v + "` is not declared in: " + exp2s(x));
+				None();
+			} else {
+				maybeBind(e2t(e), \t_e -> {
+					// Add a type of `v` to the locals tree
+					v_type = expType(t_e);
+					new_locals = setTree(locals, v, v_type);
+					maybeMap(typeStat(s1, new_locals, err), \t_p ->
+						Pair(TLet(v, v_type, t_e, t_p.first), t_p.second)
+					)
+				});
 			}
 		}
-		default: {}
-	}, false);
-	if (isOk(err)) Some(prog) else None();
+		Assign(v, e): {
+			if (!containsKeyTree(locals, v)) {
+				err.report("var `" + v + "` is not declared in: " + exp2s(s));
+				None();
+			} else {
+				maybeBind(e2t(e), \t_e -> {
+					if (lookupTreeDef(locals, v, TypeErr()) == expType(t_e)) {
+						// Type of variable coincides with the infered type of expression - ok
+						Some(Pair(TAssign(v, t_e), locals));
+					} else {
+						None();
+					}
+				});
+			}
+		}
+		If(c, pos, neg): {
+			maybeBind(e2t(c), \t_c ->
+				maybeMap2(\t_pos, t_neg ->
+					Pair(TIf(t_c, t_pos.first, t_neg.first), locals)
+				)
+				(typeStat(pos, locals, err), typeStat(neg, locals, err))
+			)
+		}
+		While(c, s1): {
+			maybeBind(e2t(c), \t_c ->
+				maybeMap(typeStat(s1, locals, err), \t_p ->
+					Pair(TWhile(t_c, t_p.first), locals)
+				)
+			);
+		}
+		Seq(es): {
+			maybeMap(
+				fold(es, Some(Pair([], locals)), \acc, x ->
+					switch (acc) {
+						Some(p): {
+							maybeMap(typeStat(x, p.second, err), \t_x ->
+								Pair(arrayPush(p.first, t_x.first), t_x.second)
+							);
+						}
+						None(): None();
+					}
+				), \t_p -> Pair(TSeq(t_p.first), t_p.second)
+			);
+		}
+		Print(e): {
+			maybeMap(e2t(e), \t_e -> Pair(TPrint(t_e), locals));
+		}
+		Read(v): {
+			Some(Pair(TRead(v, lookupTreeDef(locals, v, TypeErr())), locals));
+		}
+		default: {
+			err.report("a statement is expected, met:\n" + exp2s(s));
+			None();
+		}
+	}
+}
+
+
+typeExp(e: Exp, locals: Tree<string, Type>, err: Err) -> Maybe<TExp> {
+	e_t = switch (e) {
+		Call(op, args): {
+			t_args = filtermap(args, \arg -> typeExp(arg, locals, err));
+			if (length(t_args) < length(args)) {
+				// Some of arguments were not typed - failure.
+				println("A");
+				None();
+			} else {
+				all_args_are = \tp -> forall(t_args, \x -> expType(x) == tp);
+				check_arg = \t_arg, t_ret -> if (t_arg == expType(t_args[0])) {
+					Some(t_ret);
+				} else {
+					None();
+				}
+				mtype = if (op == "+") {
+					if (all_args_are(TypeInt())) Some(TypeInt()) else 
+					if (all_args_are(TypeString())) Some(TypeString()) else {
+						println("B");
+						None();
+					}
+				} else
+				if (op == "-" || op == "*" || op == "/" || op == "%") {
+					if (all_args_are(TypeInt())) Some(TypeInt()) else None();
+				} else
+				if (op == "==" || op == "!=" || op == "<" || op == "<=" || op == ">" || op == ">=") {
+					arg_tp = expType(t_args[0]);
+					if (arg_tp == expType(t_args[1])) Some(TypeBool()) else None();
+				} else if (op == "&&" || op == "||") {
+					if (all_args_are(TypeBool())) Some(TypeBool()) else None();
+				} else if (op == "i2s") {
+					check_arg(TypeInt(), TypeString());
+				} else if (op == "i2b") {
+					check_arg(TypeInt(), TypeBool());
+				} else if (op == "s2i") {
+					check_arg(TypeString(), TypeInt());
+				} else if (op == "s2b") {
+					check_arg(TypeString(), TypeBool());
+				} else if (op == "b2s") {
+					check_arg(TypeBool(), TypeString());
+				} else if (op == "b2i") {
+					check_arg(TypeBool(), TypeInt());
+				} else {
+					None();
+				}
+				maybeMap(mtype, \type -> TCall(op, t_args, type));
+			}
+		}
+		Array(vals): {
+			// Arrays are not supported yet
+			None();
+		}
+		Var(v):    maybeMap(lookupTree(locals, v), \t -> TVar(v, t));
+		Int(i):    Some(TInt(i));
+		Bool(b):   Some(TBool(b));
+		String(s): Some(TString(s));
+		default:   None();
+	}
+	if (isNone(e_t)) {
+		locals2s = \ls -> "[" + superglue(tree2pairs(ls), \p -> p.first + ": " + type2s(p.second), ", ") + "]";
+		err.report("expression: " + exp2s(e) + " was not typed.\n" +
+			"Locals: " + locals2s(locals)
+		);
+	}
+	e_t;
 }

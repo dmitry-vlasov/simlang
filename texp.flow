@@ -1,0 +1,36 @@
+import type;
+
+export {
+
+// Typed version of Exp structs. Some structs have explicit types.
+
+TExp ::= TLet, TAssign, TIf, TWhile, TSeq, TCall, TArray, TPrint, TRead, TVar, TInt, TBool, TString;
+	TLet(var : string, type: Type, e: TExp, body: TExp);
+	TAssign(var : string, e: TExp);
+	TIf(cond: TExp, pos: TExp, neg: TExp);
+	TWhile(cond: TExp, body: TExp);
+	TSeq(stats: [TExp]);
+
+	TArray(vals : [TExp]);
+	TPrint(e: TExp);
+	TRead(var: string, type: Type);
+
+	TCall(op : string, args : [TExp], type: Type);
+	TVar(v: string, type: Type);
+	TInt(i : int);
+	TBool(b: bool);
+	TString(s : string);
+
+	expType(e: TExp) -> Type;
+}
+
+expType(e: TExp) -> Type {
+	switch (e) {
+		TCall(__,__,t): t;
+		TVar(__, t):    t;
+		TInt(__):       TypeInt();
+		TBool(__):      TypeBool();
+		TString(__):    TypeString();
+		default:        TypeErr();
+	}
+}

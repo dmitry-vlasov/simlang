@@ -15,17 +15,21 @@ main() {
 		code = getFileContent(file);
 		err = makeErr();
 		maybeApply(parse(code, err), \prog -> {
+			if (isUrlParameterTrue("show-parsed") || isUrlParameterTrue("show-all")) {
+				println("program:\n" + exp2s(prog));
+			}
 			maybeApply(typecheck(prog, err), \typed -> {
 				if (isUrlParameterTrue("show-parsed") || isUrlParameterTrue("show-all")) {
-					println("program:\n" + exp2s(typed));
+					println("typed:\n" + texp2s(typed));
 				}
 				maybeApply(prog2bc(typed, err), \bytecode -> {
-						if (isUrlParameterTrue("show-bytecode") || isUrlParameterTrue("show-all")) {
-							println(bcode2s(bytecode));
-						}
+					if (isUrlParameterTrue("show-bytecode") || isUrlParameterTrue("show-all")) {
+						println(bcode2s(bytecode));
+					}
+					if (!isUrlParameterFalse("run")) {
 						execBcCode(bytecode, isUrlParameterTrue("trace"), err);
 					}
-				);
+				});
 			});
 		});
 	}

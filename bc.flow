@@ -1,19 +1,33 @@
+import type;
+
 export {
 
-BcComm ::= BcPush, BcPop, BcPrint, BcRead, BcIf, BcGoto, BcBin, BcUn, BcConst;
+BcComm ::= BcPush, BcPop, BcPrint, BcReadBool, BcReadInt, BcReadString, BcIf, BcGoto, BcOp, BcConstBool, BcConstInt, BcConstString;
+	// stack <-> locals operations
 	BcPush(i: int);
 	BcPop(i: int);
-	BcPrint();
-	BcRead(i: int);
+
+	// Control flow operations
 	BcIf(sh: int);
 	BcGoto(sh: int);
-	BcBin(op: string);
-	BcUn(op: string);
-	BcConst(v: int);
+
+	// input/output commands
+	BcReadBool(i: int);
+	BcReadInt(i: int);
+	BcReadString(i: int);
+	BcPrint();
+
+	// Stack operations
+	BcOp(op: string, arity: int);
+
+	// Constants (for pushing onto stack):
+	BcConstBool(b: bool);
+	BcConstInt(v: int);
+	BcConstString(s: string);
 
 BcCode(
-	vars: [string],
-	code : [BcComm],
+	locals: int,    // number of local variables, used in a program
+	code: [BcComm],
 );
 
 }

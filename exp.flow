@@ -6,12 +6,11 @@ Exp ::= Let, Assign, If, While, Seq, Call, Array, Print, Read, Var, Int, Bool, S
 	If(cond: Exp, pos: Exp, neg: Exp);
 	While(cond: Exp, body: Exp);
 	Seq(stats: [Exp]);
-
-	Array(vals : [Exp]);
 	Print(e: Exp);
 	Read(var: string);
 
 	Call(op : string, args : [Exp]);
+	Array(vals : [Exp]);
 	Var(v: string);
 	Int(i : int);
 	Bool(b: bool);
