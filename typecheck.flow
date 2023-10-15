@@ -13,8 +13,11 @@ typecheck(prog: Exp, err: Err) -> Maybe<TExp> {
 	maybeMap(typeStat(prog, makeTree(), err), \p -> p.first);
 }
 
+// In order to type expressions correctly, we need to track the types of variables in a current
+// scope. The 'locals' variable here servers this function.
 typeStat(s: Exp, locals: Tree<string, Type>, err: Err) -> Maybe<Pair<TExp, Tree<string, Type>>> {
 	e2t = \x -> typeExp(x, locals, err);
+	// Recursively try to type all expressions, used in statement.
 	switch (s) {
 		Assign(v, e): {
 			maybeBind(e2t(e), \t_e -> {
@@ -65,14 +68,12 @@ typeStat(s: Exp, locals: Tree<string, Type>, err: Err) -> Maybe<Pair<TExp, Tree<
 	}
 }
 
-
 typeExp(e: Exp, locals: Tree<string, Type>, err: Err) -> Maybe<TExp> {
 	e_t = switch (e) {
 		Call(op, args): {
 			t_args = filtermap(args, \arg -> typeExp(arg, locals, err));
 			if (length(t_args) < length(args)) {
 				// Some of arguments were not typed - failure.
-				println("A");
 				None();
 			} else {
 				all_args_are = \tp -> forall(t_args, \x -> expType(x) == tp);
@@ -82,21 +83,34 @@ typeExp(e: Exp, locals: Tree<string, Type>, err: Err) -> Maybe<TExp> {
 					None();
 				}
 				mtype = if (op == "+") {
+					// The '+' operation is overloaded: it may be applied to ints and to strings.
 					if (all_args_are(TypeInt())) Some(TypeInt()) else 
 					if (all_args_are(TypeString())) Some(TypeString()) else {
-						println("B");
 						None();
 					}
 				} else
+				// Unary boolean 'not' operator
+				if (op == "not") {
+					if (expType(t_args[0]) == TypeBool()) Some(TypeBool()) else None();
+				} else
+				// Unary integer 'neg' operator
+				if (op == "neg") {
+					if (expType(t_args[0]) == TypeInt()) Some(TypeInt()) else None();
+				} else
+				// Arithmetic operators are always integer
 				if (op == "-" || op == "*" || op == "/" || op == "%") {
 					if (all_args_are(TypeInt())) Some(TypeInt()) else None();
 				} else
 				if (op == "==" || op == "!=" || op == "<" || op == "<=" || op == ">" || op == ">=") {
+					// Comparison operators are overloaded: any types may be passed,
+					// but may be the same for both arguments.
 					arg_tp = expType(t_args[0]);
 					if (arg_tp == expType(t_args[1])) Some(TypeBool()) else None();
 				} else if (op == "&&" || op == "||") {
 					if (all_args_are(TypeBool())) Some(TypeBool()) else None();
-				} else if (op == "i2s") {
+				} else
+				// Conversion operators have exact argument types.
+				if (op == "i2s") {
 					check_arg(TypeInt(), TypeString());
 				} else if (op == "i2b") {
 					check_arg(TypeInt(), TypeBool());
@@ -125,9 +139,8 @@ typeExp(e: Exp, locals: Tree<string, Type>, err: Err) -> Maybe<TExp> {
 		default:   None();
 	}
 	if (isNone(e_t)) {
-		locals2s = \ls -> "[" + superglue(tree2pairs(ls), \p -> p.first + ": " + type2s(p.second), ", ") + "]";
 		err.report("expression: " + exp2s(e) + " was not typed.\n" +
-			"Locals: " + locals2s(locals)
+			"Locals: " + "[" + superglue(tree2pairs(locals), \p -> p.first + ": " + type2s(p.second), ", ") + "]"
 		);
 	}
 	e_t;

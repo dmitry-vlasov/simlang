@@ -4,6 +4,7 @@ import err;
 import util;
 
 export {
+	// Parse the simple language - produce the AST tree (DAG)
 	parse(program: string, err: Err) -> Maybe<Exp>;
 }
 
@@ -22,7 +23,7 @@ parse(program: string, err: Err) -> Maybe<Exp> {
 			None();
 		}
 	} else {
-		err.report("Could not understand grammar");
+		err.report("Could not understand grammar (The grmmar is broken)");
 		None();
 	}
 }

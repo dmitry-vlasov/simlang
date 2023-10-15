@@ -10,26 +10,30 @@ import util;
 
 export {
 
+// Run a program (i.e. execute the bytecode).
 execBcCode(prog: BcCode, trace: bool, err: Err, io: Io) -> void;
-
-bcode2s(prog: BcCode) -> string;
 
 }
 
+// Runtime values, which occur during execution
 Val ::= ValBool, ValInt, ValString, ValErr;
 	ValBool(b: bool);
 	ValInt(i: int);
 	ValString(s: string);
-	ValErr();
+	ValErr(); // Runtime error value
 
+// The global state og the program.
 State(
-	vars: [Val],
-	pc: int,
-	stack: List<Val>
+	vars: [Val],      // state of local variables
+	pc: int,          // program counter - the index of a current command
+	stack: List<Val>  // stack, which is used for evaluation of expressions
 );
 
+// Check that all locals indexes, used in bytecode are within boundaries.
 verifyBcCode(prog: BcCode, err: Err) -> bool {
-	check_i = \i, c -> if (i < 0 || i >= prog.locals) err.report("illegal var index in: " + comm2s(c));
+	check_i = \i, c -> if (i < 0 || i >= prog.locals) {
+		err.report("illegal var index in: " + comm2s(c));
+	}
 	iter(prog.code, \c -> switch (c) {
 		BcPush(i):       check_i(i, c);
 		BcPop(i):        check_i(i, c);
@@ -44,15 +48,18 @@ verifyBcCode(prog: BcCode, err: Err) -> bool {
 execBcCode(prog: BcCode, trace: bool, err: Err, io: Io) -> void {
 	if (verifyBcCode(prog, err)) {
 		initial = State(
+			// All variables initially are set to some default values - no matter which particularily.
 			generate(0, prog.locals, \__ -> ValInt(0)), 
 			0, makeList()
 		);
 		if (trace) {
 			println("initial state: " + state2s(initial));
 		}
+		// Iterate the change of state until program counter goes out of program or error occurs.
 		ignore(for(initial,
 			\s -> isOk(err) && s.pc < length(prog.code),
 			\prev -> {
+				// A single step of execution: action of a command. 
 				next = execComm(prog.code[prev.pc], prev, err, io);
 				if (trace) {
 					println(comm2s(prog.code[prev.pc]) + ":\n\t" + state2s(next));
@@ -64,38 +71,49 @@ execBcCode(prog: BcCode, trace: bool, err: Err, io: Io) -> void {
 }
 
 execComm(comm:  BcComm, s: State, err: Err, io: Io) -> State {
+	// Increment the program counter.
 	incPc = \x -> State(x with pc = x.pc + 1);
+	// Push some value on a stack.
 	push = \x, v -> State(x with stack = Cons(v, x.stack));
+	// Pop value from the stack. Note: a Pair is returned, not a single value!
 	pop = \x -> switch (x.stack) {
 		Cons(h, t): Pair(h, State(x with stack = t));
 		EmptyList(): { err.report("popping empty list"); Pair(ValErr(), x); }
 	}
 	switch (comm) {
 		BcPush(i): {
+			// Push the value of an 'i'-th local variable on stack.
 			incPc(push(s, s.vars[i]));
 		}
 		BcPop(i): {
+			// Pop the value from stack an set it to the 'i'-th local variable.
 			p = pop(s);
 			incPc(State(p.second with vars = replace(s.vars, i, p.first)));
 		}
 		BcPrint(): {
+			// Pop the value from stack and send it to the output sink.
 			p = pop(s);
 			io.out(val2s(p.first));
 			incPc(p.second);
 		}
 		BcReadBool(i): {
+			// Read bool value from io to the to the 'i'-th local variable.
 			incPc(State(s with vars = replace(s.vars, i, ValBool(s2b(io.in())))));
 		}
 		BcReadInt(i): {
+			// Read int value from io to the to the 'i'-th local variable.
 			incPc(State(s with vars = replace(s.vars, i, ValInt(s2i(io.in())))));
 		}
 		BcReadString(i): {
+			// Read string value from io to the to the 'i'-th local variable.
 			incPc(State(s with vars = replace(s.vars, i, ValString(io.in()))));
 		}
-		BcIf(sh): {
+		BcIfNot(sh): {
 			p = pop(s);
 			switch (p.first) {
 				ValBool(c): {
+					// Pop the boolean value from stack, and if not true, 
+					// shift the program counter by 'sh'. Otherwise shift by 1 (increment).s
 					State(p.second with pc = s.pc + if (c) 1 else sh);
 				}
 				default: {
@@ -105,19 +123,24 @@ execComm(comm:  BcComm, s: State, err: Err, io: Io) -> State {
 			}
 		}
 		BcGoto(sh): {
+			// Shift a program counter by 'sh'.
 			State(s with pc = s.pc + sh);
 		}
 		BcConstBool(b): {
+			// Push a constant bool value onto the stack.
 			incPc(push(s, ValBool(b)));
 		}
 		BcConstInt(i): {
+			// Push a constant int value onto the stack.
 			incPc(push(s, ValInt(i)));
 		}
 		BcConstString(s1): {
+			// Push a constant string value onto the stack.
 			incPc(push(s, ValString(s1)));
 		}
 		BcOp(op, arity): {
-			// pop arguments from stack and collect them on the second component of triple
+			// Pop arguments from stack 'arity' times and collect them on the second component of triple.
+			// The first component of a triple is state after popping args.
 			t = for(Triple(s, [], 0),
 				\x -> x.third < arity,
 				\x -> {
@@ -125,6 +148,7 @@ execComm(comm:  BcComm, s: State, err: Err, io: Io) -> State {
 					Triple(p.second, arrayPush(x.second, p.first), x.third + 1);
 				}
 			);
+			// Execute an operation and push the result back onto the stack.
 			incPc(push(t.first, execOp(op, t.second, err)));
 		}
 	}
@@ -157,6 +181,7 @@ val2string(v: Val, err: Err) -> string {
 	}
 }
 
+// Performs a single operation on 'args'.
 execOp(op: string, args: [Val], err: Err) -> Val {
 	check_arity = \arity -> if (length(args) != arity) {
 		err.report("wrong arity of " + op + ", expected: " + i2s(arity) + " wile got: " + i2s(length(args)));
@@ -174,6 +199,7 @@ execOp(op: string, args: [Val], err: Err) -> Val {
 			default:      ValErr();
 		}
 	}
+	// Set of conversions from one base type to another.
 	if (op == "i2s") {
 		check_arity(1);
 		ValString(i2s(val2int(args[0], err)));
@@ -192,13 +218,17 @@ execOp(op: string, args: [Val], err: Err) -> Val {
 	} else if (op == "b2i") {
 		check_arity(1);
 		ValInt(if (val2bool(args[0], err)) 1 else 0);
-	} else if (op == "neg") {
+	} else
+	// Unary boolean operations.
+	if (op == "neg") {
 		check_arity(1);
 		ValInt(-val2int(args[0], err));
 	} else if (op == "not") {
 		check_arity(1);
 		ValBool(!val2bool(args[0], err));
-	} else if (op == "+") {
+	} else
+	// Special overloaded operation '+': act on integers AND strings.
+	if (op == "+") {
 		switch (valType(args[0])) {
 			TypeInt():    ValInt(fold(args, 0, \acc, v -> acc + val2int(v, err)));
 			TypeString(): ValString(fold(args, "", \acc, v -> acc + val2string(v, err)));
@@ -207,43 +237,22 @@ execOp(op: string, args: [Val], err: Err) -> Val {
 			}
 		}
 	} else
+	// Binary arhithmetics.
 	if (op == "-")  int_bin_op(\x, y -> x - y) else
 	if (op == "*")  int_bin_op(\x, y -> x * y) else
 	if (op == "/")  int_bin_op(\x, y -> x / y) else
 	if (op == "%")  int_bin_op(\x, y -> x % y) else
+	// Comparison.
 	if (op == "==") cmp_bin_op(\x, y -> x == y, \x, y -> x == y, \x, y -> x == y) else
 	if (op == "!=") cmp_bin_op(\x, y -> x != y, \x, y -> x != y, \x, y -> x != y) else
 	if (op == "<")  cmp_bin_op(\x, y -> x <  y, \x, y -> x <  y, \x, y -> x <  y) else
 	if (op == "<=") cmp_bin_op(\x, y -> x <= y, \x, y -> x <= y, \x, y -> x <= y) else
 	if (op == ">")  cmp_bin_op(\x, y -> x >  y, \x, y -> x >  y, \x, y -> x >  y) else
 	if (op == ">=") cmp_bin_op(\x, y -> x >= y, \x, y -> x >= y, \x, y -> x >= y) else
+	// Boolean operations.
 	if (op == "&&") ValBool(fold(args, true, \acc, v -> acc && val2bool(v, err))) else 
 	if (op == "||") ValBool(fold(args, false, \acc, v -> acc || val2bool(v, err))) else {
 		err.report("unsupported operation: " + op); ValInt(0);
-	}
-}
-
-bcode2s(prog: BcCode) -> string {
-	"locals: " + i2s(prog.locals) + "\n" + 
-	"bytecode: [\n" +
-		supergluei(prog.code, \i, c -> "\t" + i2s(i) + ": " + comm2s(c), "\n") + 
-	"\n]";
-}
-
-comm2s(comm: BcComm) -> string {
-	switch (comm) {
-		BcPush(i):        "push " + i2s(i);
-		BcPop(i):         "pop " + i2s(i);
-		BcPrint():        "print";
-		BcReadBool(i):    "read bool " + i2s(i);
-		BcReadInt(i):     "read int " + i2s(i);
-		BcReadString(i):  "read string " + i2s(i);
-		BcIf(sh):         "if, else goto +" + i2s(sh);
-		BcGoto(sh):       "goto " + i2s(sh);
-		BcConstBool(b):   "cbool " + b2s(b);
-		BcConstInt(i):    "cint " + i2s(i);
-		BcConstString(s): "cstring \"" + s + "\"";
-		BcOp(op, a):      "op " + op + ": " + i2s(a);
 	}
 }
 

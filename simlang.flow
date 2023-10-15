@@ -16,22 +16,28 @@ main() {
 		code = getFileContent(file);
 		err = makeErr();
 		maybeApply(parse(code, err), \prog -> {
+			// The source code was successfully parsed
 			if (isUrlParameterTrue("show-parsed") || isUrlParameterTrue("show-all")) {
 				println("program:\n" + exp2s(prog));
 			}
 			maybeApply(typecheck(prog, err), \typed -> {
+				// The parsed AST was successfully typed
 				if (isUrlParameterTrue("show-typed") || isUrlParameterTrue("show-all")) {
 					println("typed:\n" + texp2s(typed));
 				}
 				maybeApply(prog2bc(typed, err), \bytecode -> {
+					// The typed program was successfully compiled to bytecode 
 					if (isUrlParameterTrue("show-bytecode") || isUrlParameterTrue("show-all")) {
 						println(bcode2s(bytecode));
 					}
 					if (!isUrlParameterFalse("run")) {
+						// Going to run program ...
 						in_param = getUrlParameter("in");
 						io = if (in_param == "") {
 							Io(\ -> readUntil("\n"), println);
 						} else {
+							// When tests are run automatically, we need to mock the used input.
+							// So, the 'user input' is passed via 'in=<s_1>,<s_2>,...,<s_n>' option
 							in_seq = strSplit(in_param, ",");
 							in_counter = ref 0;
 							Io(

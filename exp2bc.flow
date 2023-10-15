@@ -9,6 +9,7 @@ export {
 }
 
 prog2bc(prog: TExp, err: Err) -> Maybe<BcCode> {
+	// Collect all variables, used in a program
 	vars = set2array(texpVars(makeSet(), prog));
 	var2ind = foldi(vars, makeTree(), \i, ac, v -> setTree(ac, v, i));
 	var_ind = \v -> switch (lookupTree(var2ind, v)) {
@@ -18,7 +19,7 @@ prog2bc(prog: TExp, err: Err) -> Maybe<BcCode> {
 			-1;
 		}
 	}
-	bytecode = doProg2bc(prog, var_ind, err);
+	bytecode = stat2bc(prog, var_ind, err);
 	if (isOk(err)) {
 		Some(BcCode(length(vars), bytecode));
 	} else {
@@ -26,34 +27,47 @@ prog2bc(prog: TExp, err: Err) -> Maybe<BcCode> {
 	}
 }
 
-doProg2bc(s: TExp, var_ind: (string) -> int, err: Err) -> [BcComm] {
+
+// Recursively produce a sequence of commands, which have the same semantics, as a program
+stat2bc(s: TExp, var_ind: (string) -> int, err: Err) -> [BcComm] {
 	switch (s) {
 		TAssign(v, e): {
+			// Process the expression, then pop the value into the 'v' variable slot in the execution engine.
 			arrayPush(
-				doExp2bc(e, var_ind, err),
+				exp2bc(e, var_ind, err),
 				BcPop(var_ind(v))
 			);
 		}
 		TIf(c, pos, neg): {
 			if (neg == TSeq([])) {
-				pos_code = doProg2bc(pos, var_ind, err);
+				pos_code = stat2bc(pos, var_ind, err);
+				// At first, evaluate the 'if' condition.
+				// Then check, if a value on the stack top is true: 
+				//   1) if it is true, just keep on execution 'pos' statement
+				//   2) otherwise jump to the end of all this bytecode segment
 				concat(
 					arrayPush(
-						doExp2bc(c, var_ind, err),
-						BcIf(length(pos_code) + 1)
+						exp2bc(c, var_ind, err),
+						BcIfNot(length(pos_code) + 1)
 					),
 					concat(
 						pos_code,
-						doProg2bc(neg, var_ind, err)
+						stat2bc(neg, var_ind, err)
 					)
 				);
 			} else {
-				pos_code = doProg2bc(pos, var_ind, err);
-				neg_code = doProg2bc(neg, var_ind, err);
+				pos_code = stat2bc(pos, var_ind, err);
+				neg_code = stat2bc(neg, var_ind, err);
+				// At first, evaluate the 'if' condition.
+				// Then check, if a value on the stack top is true: 
+				//   1) if it is true, just keep on execution 'pos' statement,
+				//     until the end of 'pos' is reached. At this point jump
+				//     to the end of this bytecode fragment
+				//   2) otherwise jump to the end of all this bytecode segment
 				concat(
 					arrayPush(
-						doExp2bc(c, var_ind, err),
-						BcIf(length(pos_code) + 2)
+						exp2bc(c, var_ind, err),
+						BcIfNot(length(pos_code) + 2)
 					),
 					concat(
 						arrayPush(pos_code, BcGoto(length(neg_code) + 1)),
@@ -63,12 +77,18 @@ doProg2bc(s: TExp, var_ind: (string) -> int, err: Err) -> [BcComm] {
 			}
 		}
 		TWhile(c, s1): {
-			cond_code = doExp2bc(c, var_ind, err);
-			s1_code = doProg2bc(s1, var_ind, err);
+			cond_code = exp2bc(c, var_ind, err);
+			s1_code = stat2bc(s1, var_ind, err);
+			// At first, evaluate the 'while' condition.
+			// Then check, if a value on the stack top is true: 
+			//   1) if it is true, just keep on execution 's1' statement,
+			//     until the end of 's1' is reached. At this point jump
+			//     back to the very beginning of this bytecode fragment
+			//   2) otherwise jump to the end of all this bytecode segment
 			concat(
 				arrayPush(
 					cond_code,
-					BcIf(length(s1_code) + 2)
+					BcIfNot(length(s1_code) + 2)
 				),
 				arrayPush(
 					s1_code,
@@ -77,12 +97,17 @@ doProg2bc(s: TExp, var_ind: (string) -> int, err: Err) -> [BcComm] {
 			);
 		}
 		TSeq(es): {
-			fold(es, [], \acc, x -> concat(acc, doProg2bc(x, var_ind, err)));
+			// Concat all translated fragments corresponding to the sequence 'es' -
+			// they will be executed sequentially.
+			fold(es, [], \acc, x -> concat(acc, stat2bc(x, var_ind, err)));
 		}
 		TPrint(e): {
-			arrayPush(doExp2bc(e, var_ind, err), BcPrint());
+			// Evaluate the expression, then pop the value from the stack and put it into the output sink.
+			arrayPush(exp2bc(e, var_ind, err), BcPrint());
 		}
 		TRead(v, t): {
+			// Depending on the type of a variable, take the value from the input and pass it to the
+			// local value slot, corresponding to the variable 'v'.
 			switch (t) {
 				TypeBool():   [BcReadBool(var_ind(v))];
 				TypeInt():    [BcReadInt(var_ind(v))];
@@ -100,21 +125,20 @@ doProg2bc(s: TExp, var_ind: (string) -> int, err: Err) -> [BcComm] {
 	}
 }
 
-
 // This function makes a conversion of a tree-like AST nodes of an expression
 // to the RPN-like (Reverse Polish Notation) sequence of commands, which operate
 // on the stack of the execution engine.
-doExp2bc(e: TExp, var_ind: (string) -> int, err: Err) -> [BcComm] {
+exp2bc(e: TExp, var_ind: (string) -> int, err: Err) -> [BcComm] {
 	switch (e) {
 		TCall(op, args,__): {
 			arrayPush(
 				// Note! here arguments are reversed (i.e. foldr function is used).
 				// Otherwise the order of oerations will be reversed during the execution.
-				foldr(args, [], \acc, arg -> concat(acc, doExp2bc(arg, var_ind, err))),
+				foldr(args, [], \acc, arg -> concat(acc, exp2bc(arg, var_ind, err))),
 				BcOp(op, length(args))
 			);
 		}
-		TVar(v,__): [BcPush(var_ind(v))];
+		TVar(v,__): [BcPush(var_ind(v))]; // Push the value of a local variable 'v' onto the stack
 		TInt(i):    [BcConstInt(i)];
 		TBool(b):   [BcConstBool(b)];
 		TString(s): [BcConstString(s)];

@@ -1,17 +1,19 @@
 export {
 
-Exp ::= Assign, If, While, Seq, Call, Array, Print, Read, Var, Int, Bool, String;
-	Assign(var : string, e: Exp);
-	If(cond: Exp, pos: Exp, neg: Exp);
-	While(cond: Exp, body: Exp);
-	Seq(stats: [Exp]);
-	Print(e: Exp);
-	Read(var: string);
+// Basic types to express AST (Abstract Syntax Tree) (or DAG) of a program.
 
-	Call(op : string, args : [Exp]);
-	Array(vals : [Exp]);
-	Var(v: string);
-	Int(i : int);
-	Bool(b: bool);
-	String(s : string);
+Exp ::= Assign, If, While, Seq, Call, Array, Print, Read, Var, Int, Bool, String;
+	Assign(var : string, e: Exp);       // i.e. 'x = 1 + y'
+	If(cond: Exp, pos: Exp, neg: Exp);  // i.e. 'if a % 2 == 0 print a'
+	While(cond: Exp, body: Exp);        // i.e. 'while x < n  x = x + 1'
+	Seq(stats: [Exp]);                  // i.e. '{ print a print b }'
+	Print(e: Exp);                      // i.e. 'print "some string"'
+	Read(var: string);                  // i.e. 'read v' (input a value from the input sink)
+
+	Call(op : string, args : [Exp]);    // i.e. 'a + b', 'i2s(n)'
+	Array(vals : [Exp]);                // i.e. '[1, 2, 3]' - NOT SUPPORTED YET
+	Var(v: string);                     // i.e. 'a', 'xyz', 'A_12'
+	Int(i : int);                       // i.e. '123', '-12'
+	Bool(b: bool);                      // i.e. 'true' or 'false'
+	String(s : string);                 // i.e. '" some string literal :) "'
 }

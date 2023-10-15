@@ -1,5 +1,8 @@
 export {
 
+// Types, used in simple language: integer, boolean and string.
+//   TypeErr is used to indicate problems with typing.
+
 Type ::= TypeInt, TypeBool, TypeString, TypeErr;
 	TypeInt(); TypeBool(); TypeString(); TypeErr();
 

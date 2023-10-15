@@ -6,12 +6,13 @@ import text/blueprint;
 runTest(file: string, err: bool) -> bool {
 	out = execSystemProcessOutput("java", [
 		"-jar", "simlang.jar", "file=" + file, "show-all=1",
-		"in=5,5,5,5"
+		"in=5,5,5,5,5" // To keep it simple - pass as input always 5
 	], ".");
 	if (isUrlParameterTrue("show-out")) {
 		println("Test: " + file + "\n---------------------------\n" + out.stdall);
-	} 
-	success = strContains(out.stdall, "error") == err;
+	}
+	// If an error is expected - it must happen:
+	success = strContains(out.stdall, "error:") == err;
 	if (success) {
 		println("Test: " + file + " PASSED");
 	} else {

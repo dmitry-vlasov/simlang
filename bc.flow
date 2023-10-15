@@ -4,7 +4,7 @@ export {
 
 // Bytecode commands
 BcComm ::=
-	BcPush, BcPop, BcPrint, BcReadBool, BcReadInt, BcReadString, BcIf,
+	BcPush, BcPop, BcPrint, BcReadBool, BcReadInt, BcReadString, BcIfNot,
 	BcGoto, BcOp, BcConstBool, BcConstInt, BcConstString;
 
 	// stack <-> locals operations
@@ -12,8 +12,8 @@ BcComm ::=
 	BcPop(i: int);
 
 	// Control flow operations
-	BcIf(sh: int);
-	BcGoto(sh: int);
+	BcIfNot(sh: int); // Conditional jump: shifts the program counter, if value on a stack is false.
+	BcGoto(sh: int);  // Unconditional jump
 
 	// input/output commands
 	BcReadBool(i: int);
@@ -22,9 +22,9 @@ BcComm ::=
 	BcPrint();
 
 	// Stack operations
-	BcOp(op: string, arity: int);
+	BcOp(op: string, arity: int); // op may be: '+' , '-', '*', 'i2s',... etc.
 
-	// Constants (for pushing onto stack):
+	// Constants (are pushed onto stack):
 	BcConstBool(b: bool);
 	BcConstInt(v: int);
 	BcConstString(s: string);

@@ -2,6 +2,7 @@ import string_utils;
 import text/blueprint;
 import exp;
 import texp;
+import bc;
 
 export {
 
@@ -11,6 +12,10 @@ type2s(t: Type) -> string;
 // Make the string representation of a (typed) expression (operation inverse to parsing)
 exp2s(e: Exp) -> string;
 texp2s(e: TExp) -> string;
+
+// String representation of a bytecode
+bcode2s(prog: BcCode) -> string;
+comm2s(comm: BcComm) -> string;
 
 // Gather all variables from TExp
 texpVars(acc: Set<string>, e: TExp) -> Set<string>;
@@ -32,6 +37,7 @@ exp2s(e: Exp) -> string {
 			var +  " = " + exp2s(x);
 		}
 		Seq(es): {
+			if (length(es) == 0) "" else
 			if (length(es) == 1) exp2s(es[0]) else "{\n" + 
 				strIndent(superglue(es, exp2s, "\n")) + 
 			"\n}";
@@ -45,13 +51,13 @@ exp2s(e: Exp) -> string {
 			}
 		}
 		While(cond, e1): {
-			"while " + exp2s(cond) + "\n" + strIndent(exp2s(e1));
+			"while " + exp2s(cond) + " " + exp2s(e1);
 		}
 		If(cond, pos, neg): {
 			if (neg == Seq([])) {
-				"if " + exp2s(cond) + "\n" + strIndent(exp2s(pos));
+				"if " + exp2s(cond) + " " + exp2s(pos);
 			} else {
-				"if " + exp2s(cond) + "\n" + strIndent(exp2s(pos)) + "\nelse\n" + strIndent(exp2s(neg));
+				"if " + exp2s(cond) + " " + exp2s(pos) + " else " + exp2s(neg);
 			}
 		}
 		Array(vals): {
@@ -76,6 +82,7 @@ texp2s(e: TExp) -> string {
 			var +  " = " + texp2s(x);
 		}
 		TSeq(es): {
+			if (length(es) == 0) "" else
 			if (length(es) == 1) texp2s(es[0]) else "{\n" + 
 				strIndent(superglue(es, texp2s, "\n")) + 
 			"\n}";
@@ -83,19 +90,21 @@ texp2s(e: TExp) -> string {
 		TCall(op, args,__): {
 			if (length(args) == 0) op else
 			if (length(args) == 1) {
-				op + texp2s(args[0]);
+				if (op == "not") "!" + texp2s(args[0]) else
+				if (op == "neg") "-" + texp2s(args[0]) else
+				op + "(" + texp2s(args[0]) + ")";
 			} else {
 				"(" + superglue(args, texp2s, " " + op + " ") + ")";
 			}
 		}
 		TWhile(cond, e1): {
-			"while " + texp2s(cond) + "\n" + strIndent(texp2s(e1));
+			"while " + texp2s(cond) + " " + texp2s(e1);
 		}
 		TIf(cond, pos, neg): {
 			if (neg == TSeq([])) {
-				"if " + texp2s(cond) + "\n" + strIndent(texp2s(pos));
+				"if " + texp2s(cond) + " " + texp2s(pos);
 			} else {
-				"if " + texp2s(cond) + "\n" + strIndent(texp2s(pos)) + "\nelse\n" + strIndent(texp2s(neg));
+				"if " + texp2s(cond) + " " + texp2s(pos) + " else " + texp2s(neg);
 			}
 		}
 		TArray(vals): {
@@ -111,6 +120,30 @@ texp2s(e: TExp) -> string {
 		TInt(i): i2s(i)
 		TBool(b): b2s(b);
 		TString(s): "\"" + s + "\"";
+	}
+}
+
+bcode2s(prog: BcCode) -> string {
+	"locals: " + i2s(prog.locals) + "\n" + 
+	"bytecode: [\n" +
+		supergluei(prog.code, \i, c -> "\t" + i2s(i) + ": " + comm2s(c), "\n") + 
+	"\n]";
+}
+
+comm2s(comm: BcComm) -> string {
+	switch (comm) {
+		BcPush(i):        "push " + i2s(i);
+		BcPop(i):         "pop " + i2s(i);
+		BcPrint():        "print";
+		BcReadBool(i):    "read bool " + i2s(i);
+		BcReadInt(i):     "read int " + i2s(i);
+		BcReadString(i):  "read string " + i2s(i);
+		BcIfNot(sh):      "ifnot goto +" + i2s(sh);
+		BcGoto(sh):       "goto " + i2s(sh);
+		BcConstBool(b):   "const bool " + b2s(b);
+		BcConstInt(i):    "const int " + i2s(i);
+		BcConstString(s): "const string \"" + s + "\"";
+		BcOp(op, a):      "op " + op + ": " + i2s(a);
 	}
 }
 
