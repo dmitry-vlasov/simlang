@@ -3,10 +3,29 @@ Simple language (simlang)
 
 This is the implementation of a simple language, which features:
 * Basic types: integer, boolean and string
-* assignment to local variables, i.e. a = 5
-* basic arithmetc operations (+,-,*,/,%), comparison (<,>, <=, >=, ==, !=), boolean operators (!, &&, ||)
-* strings may be concatenated with + operator
-* basic control-flow constructions: if-else, while, scope blocks (in curly braces).
+* assignment to local variables, i.e. `a = 5`
+* basic arithmetc operations (`+`, `-`, `*`, `/`, `%`), comparison (`<`, `>`, `<=`, `>=`, `==`, `!=`), boolean operators (`!`, `&&`, `||`)
+* strings may be concatenated with `+` operator
+* basic control-flow constructions: `if`-`else`, `while`, scope blocks (in curly braces: `{` `}`).
+* type conversion functions: `i2s`, `i2b`, `s2i`, `s2b`, `b2i`, `b2s` - converts values of basic types to other types
+* no explicit variable typing is needed - compiler determines types of expressions during compilation
+
+Example of syntax:
+```
+{
+	n = 0
+	print "input integer square root argument:"
+	read n
+	x = 0
+	y = 0
+	while y <= n {
+		y = y + x + x + 1
+		x = x + 1
+	}
+	x = x - 1
+	print "integer square root of " + i2s(n) + " is " + i2s(x)
+}
+```
 
 Examples of syntax are in `tests` folder.
 The exact grammar is in `simlang.gringo` file.
@@ -20,7 +39,10 @@ Compiler allows a user to:
  * compile a program to bytecode, see its representation
  * execute a bytecode, trace the execution (optionally)
 
-All programming is done in the language  [Flow](https://github.com/area9innovation/flow9)
+All programming is done in the language  [Flow9](https://github.com/area9innovation/flow9)
+
+For comfortable code browsing it is highly recomended to install the flow9 language and vscode
+extension for flow9. 
 
 Usage
 -----

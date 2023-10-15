@@ -4,8 +4,8 @@
 	read n
 	x = 0
 	y = 0
-	while (y <= n) {
-		y = y + (x + (x + 1))
+	while y <= n {
+		y = y + x + x + 1
 		x = x + 1
 	}
 	x = x - 1
