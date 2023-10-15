@@ -1,6 +1,7 @@
 import err;
 import exp;
 import bc;
+import util;
 
 export {
 	typecheck(prog: Exp, err: Err) -> Maybe<Exp>;

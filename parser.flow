@@ -1,6 +1,7 @@
 import text/gringo/gringo_interpreter;
 import exp;
 import err;
+import util;
 
 export {
 	parse(program: string, err: Err) -> Maybe<Exp>;

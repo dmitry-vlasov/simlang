@@ -1,0 +1,150 @@
+import string_utils;
+import text/blueprint;
+import exp;
+
+export {
+
+// Make the string representation of an expression (operation inverse to parsing)
+exp2s(e: Exp) -> string;
+
+// Fold an expression: collect the data in `acc` (accumulator) via
+// traversing the AST of an expression. The folding function has 3 args:
+//  1) current value of accumulator,
+//  2) expression to observe
+//  3) the set of local variables at current scope.
+foldExp(acc: ?, e: Exp, fn: (?, Exp, Set<string>) -> ?, args_first: bool) -> ?;
+
+
+// Traverse an AST of expression. The observing function has 2 args:
+//  1) expression to observe
+//  2) the set of local variables at current scope.
+iterExp(e: Exp, fn: (Exp, Set<string>) -> void, args_first: bool) -> void;
+
+}
+
+exp2s(e: Exp) -> string {
+	switch (e) {
+		Let(var, def, e1): {
+			"let " + var +  " = " + exp2s(def) + "\n" + strIndent(exp2s(e1));
+		}
+		Assign(var, x): {
+			var +  " = " + exp2s(x);
+		}
+		Seq(es): {
+			if (length(es) == 1) exp2s(es[0]) else "{\n" + 
+				strIndent(superglue(es, exp2s, "\n")) + 
+			"\n}";
+		}
+		Call(op, args): {
+			if (length(args) == 0) op else
+			if (length(args) == 1) {
+				op + exp2s(args[0]);
+			} else {
+				"(" + superglue(args, exp2s, " " + op + " ") + ")";
+			}
+		}
+		While(cond, e1): {
+			"while " + exp2s(cond) + "\n" + strIndent(exp2s(e1));
+		}
+		If(cond, pos, neg): {
+			if (neg == Seq([])) {
+				"if " + exp2s(cond) + "\n" + strIndent(exp2s(pos));
+			} else {
+				"if " + exp2s(cond) + "\n" + strIndent(exp2s(pos)) + "\nelse\n" + strIndent(exp2s(neg));
+			}
+		}
+		Array(vals): {
+			"[" + superglue(vals, exp2s, ", ") + "]";
+		}
+		Print(e1): {
+			"print " + exp2s(e1);
+		}
+		Read(v): {
+			"read " + v;
+		}
+		Var(v): v;
+		Int(i): i2s(i)
+		Bool(b): b2s(b);
+		String(s): "\"" + s + "\"";
+	}
+}
+
+foldExp(a: ?, e: Exp, fn: (?, Exp, Set<string>) -> ?, args_first: bool) -> ? {
+	doFoldExp(
+		ExpFoldAcc(a, makeSet()), e, 
+		\x, e1 -> ExpFoldAcc(fn(x.acc, e1, x.locals), x.locals), 
+		args_first
+	).acc;
+}
+
+ExpFoldAcc(
+	acc: ?,
+	locals: Set<string>,
+);
+
+doFoldExp(acc: ExpFoldAcc, e: Exp, fn: (ExpFoldAcc, Exp) -> ExpFoldAcc, args_first: bool) -> ExpFoldAcc {
+	do_args = \ac -> switch (e) {
+		Let(v, e1, body): {
+			doFoldExp(
+				ExpFoldAcc(
+					doFoldExp(ac, e1, fn, args_first).acc,
+					insertSet(ac.locals, v)
+				),
+				body, fn, args_first
+			);
+		}
+		Seq(stats): {
+			fold(stats, ac, \a, x -> doFoldExp(a, x, fn, args_first));
+		}
+		default: {
+			ExpFoldAcc(fold(expChildren(e), ac, \a, x -> doFoldExp(a, x, fn, args_first)).acc, ac.locals);
+		}
+	}
+	if (args_first) {
+		fn(do_args(acc), e);
+	} else {
+		do_args(fn(acc, e));
+	}
+}
+
+iterExp(e: Exp, fn: (Exp, Set<string>) -> void, args_first: bool) -> void {
+	ignore(doIterExp(e, makeSet(), fn, args_first));
+}
+
+doIterExp(e: Exp, locals: Set<string>, fn: (Exp, Set<string>) -> void, args_first: bool) -> Set<string> {
+	do_args = \ -> switch (e) {
+		Let(v, e1, body): {
+			doIterExp(e1, locals, fn, args_first);
+			doIterExp(body, insertSet(locals, v), fn, args_first);
+		}
+		Seq(stats): {
+			fold(stats, locals, \ac, x -> doIterExp(x, ac, fn, args_first));
+		}
+		default: {
+			iter(expChildren(e), \x -> ignore(doIterExp(x, locals, fn, args_first)));
+			locals;
+		}
+	}
+	if (args_first) {
+		new_locals = do_args();
+		fn(e, locals);
+		new_locals;
+	} else {
+		fn(e, locals);
+		do_args();
+	}
+}
+
+expChildren(e: Exp) -> [Exp] {
+	switch (e) {
+		Let(__, e1, e2): [e1, e2];
+		Assign(__, e1): [e1];
+		If(cond, pos, neg): [cond, pos, neg];
+		While(cond, e1): [cond, e1];
+		Seq(es): es;
+		Call(__, es): es;
+		Array(vals): vals;
+		Print(e1): [e1];
+		default: [];
+	}
+}

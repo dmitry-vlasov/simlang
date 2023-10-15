@@ -1,8 +1,10 @@
 import err;
 import exp;
 import bc;
+import util;
 
 export {
+	// Translate the program to the bytecode. In case of errors None is returned.
 	prog2bc(p: Exp, err: Err) -> Maybe<BcCode>;
 }
 

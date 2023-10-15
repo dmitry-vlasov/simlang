@@ -3,6 +3,7 @@ import fs/filesystem;
 import parser;
 import typecheck;
 import exp2bc;
+import exec;
 
 main() {
 	file = getUrlParameter("exec");
