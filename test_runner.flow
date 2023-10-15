@@ -11,7 +11,7 @@ runTest(file: string, err: bool) -> bool {
 	if (isUrlParameterTrue("show-out")) {
 		println("Test: " + file + "\n---------------------------\n" + out.stdall);
 	} 
-	success = !strContains(out.stdall, "error") || err;
+	success = strContains(out.stdall, "error") == err;
 	if (success) {
 		println("Test: " + file + " PASSED");
 	} else {
