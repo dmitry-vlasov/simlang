@@ -3,7 +3,7 @@ prog = ws stat;
 stat = "if" ws exp stat "else" ws stat $"ifelse" 
 	| "if" ws exp stat $"if"
 	| "while" ws exp stat $"while"
-	| "let" ws id "=" ws exp stat $"let"
+	| "let" ws id "=" ws exp $"let"
 	| "{" ws stats "}" ws $"seq"
 	| id "=" ws exp $"assign"
 	| "print" ws exp $"print_"

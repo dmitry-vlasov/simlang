@@ -17,13 +17,13 @@ texp2s(e: TExp) -> string;
 //  2) expression to observe
 //  3) the tree of local variables at current scope.
 // The `let` functions tracks the let-statements (i.e. use it for typing)
-foldExp(acc: ?, locals: Tree<string, ??>, e: Exp, fn: (?, Exp, Tree<string, ??>) -> ?, let: (Exp) -> ??, args_first: bool) -> ?;
+//foldExp(acc: ?, locals: Tree<string, ??>, e: Exp, fn: (?, Exp, Tree<string, ??>) -> ?, let: (Exp) -> ??, args_first: bool) -> ?;
 
 
 // Traverse an AST of expression. The observing function has 2 args:
 //  1) expression to observe
 //  2) the set of local variables at current scope.
-iterExp(e: Exp, fn: (Exp, Set<string>) -> void, args_first: bool) -> void;
+//iterExp(e: Exp, fn: (Exp, Set<string>) -> void, args_first: bool) -> void;
 
 texpVars(acc: Set<string>, e: TExp) -> Set<string>;
 
@@ -40,8 +40,8 @@ type2s(t: Type) -> string {
 
 exp2s(e: Exp) -> string {
 	switch (e) {
-		Let(var, e1, s): {
-			"let " + var +  " = " + exp2s(e1) + "\n" + strIndent(exp2s(s));
+		Let(var, e1): {
+			"let " + var +  " = " + exp2s(e1);
 		}
 		Assign(var, x): {
 			var +  " = " + exp2s(x);
@@ -87,8 +87,8 @@ exp2s(e: Exp) -> string {
 
 texp2s(e: TExp) -> string {
 	switch (e) {
-		TLet(var, tp, e1, s): {
-			"let " + var + ": " + type2s(tp) + " = " + texp2s(e1) + "\n" + strIndent(texp2s(s));
+		TLet(var, tp, e1): {
+			"let " + var + ": " + type2s(tp) + " = " + texp2s(e1);
 		}
 		TAssign(var, x): {
 			var +  " = " + texp2s(x);
@@ -131,7 +131,7 @@ texp2s(e: TExp) -> string {
 		TString(s): "\"" + s + "\"";
 	}
 }
-
+/*
 foldExp(a: ?, locals: Tree<string, ??>, e: Exp, fn: (?, Exp, Tree<string, ??>) -> ?, let: (Exp) -> ??, args_first: bool) -> ? {
 	doFoldExp(
 		ExpFoldAcc(a, locals), e, 
@@ -200,7 +200,7 @@ doIterExp(e: Exp, locals: Set<string>, fn: (Exp, Set<string>) -> void, args_firs
 
 expChildren(e: Exp) -> [Exp] {
 	switch (e) {
-		Let(__, e1, e2): [e1, e2];
+		Let(__, e1): [e1];
 		Assign(__, e1): [e1];
 		If(cond, pos, neg): [cond, pos, neg];
 		While(cond, e1): [cond, e1];
@@ -211,10 +211,10 @@ expChildren(e: Exp) -> [Exp] {
 		default: [];
 	}
 }
-
+*/
 texpVars(acc: Set<string>, e: TExp) -> Set<string> {
 	switch (e) {
-		TLet(v,__,__, s):  texpVars(insertSet(acc, v), s);
+		TLet(v,__,__):     insertSet(acc, v);
 		TSeq(stats):       fold(stats, acc, texpVars);
 		TWhile(__,body):   texpVars(acc, body);
 		TIf(__, pos, neg): texpVars(texpVars(acc, pos), neg);

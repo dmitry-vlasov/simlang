@@ -97,12 +97,12 @@ getExpOps(err: Err) -> GringoTypedOperators {
 			Pair("if", \cond, pos -> If(cond, pos, Seq([]))),
 			Pair("while", \cond, body -> While(cond, body)),
 			Pair("assign", \v, e -> Assign(exp2string(v, err), e)),
-			Pair("call", \f, as -> Call(exp2string(f, err), exp2array(as, err)))
+			Pair("call", \f, as -> Call(exp2string(f, err), exp2array(as, err))),
+			Pair("let", \v, e -> Let(exp2string(v, err), e)),
 		]),
 		// A Tree<string, (Exp, Exp, Exp) -> Exp> of ternary operator constructors
 		pairs2tree([
 			Pair("ifelse", \cond, pos, neg -> If(cond, pos, neg)),
-			Pair("let", \v, e, body -> Let(exp2string(v, err), e, body)),
 		]),
 		// Quadranary
 		makeTree(),

@@ -5,7 +5,7 @@ export {
 // Typed version of Exp structs. Some structs have explicit types.
 
 TExp ::= TLet, TAssign, TIf, TWhile, TSeq, TCall, TArray, TPrint, TRead, TVar, TInt, TBool, TString;
-	TLet(var : string, type: Type, e: TExp, body: TExp);
+	TLet(var : string, type: Type, e: TExp);
 	TAssign(var : string, e: TExp);
 	TIf(cond: TExp, pos: TExp, neg: TExp);
 	TWhile(cond: TExp, body: TExp);
