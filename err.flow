@@ -1,0 +1,25 @@
+import runtime;
+
+export {
+	Err(
+		messages: ref [string],
+		report: (string) -> void
+	);
+
+	makeErr() -> Err;
+
+	isOk(err: Err) -> bool;
+}
+
+makeErr() -> Err {
+	messages = ref [];
+	report = \msg -> {
+		refArrayPush(messages, msg);
+		println("error: " + msg);
+	}
+	Err(messages, report);
+}
+
+isOk(err: Err) -> bool {
+	^(err.messages) == [];
+}

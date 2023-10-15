@@ -1,0 +1,125 @@
+import err;
+import exp;
+import bc;
+
+export {
+	prog2bc(p: Exp, err: Err) -> Maybe<BcCode>;
+}
+
+prog2bc(prog: Exp, err: Err) -> Maybe<BcCode> {
+	vars = set2array(foldExp(makeSet(), prog, \ac, x, locals -> switch (x) {
+		Let(v,__,__): insertSet(ac, v);
+		default: ac;
+	}, false));
+	var2ind = foldi(vars, makeTree(), \i, ac, v -> setTree(ac, v, i));
+	var_ind = \v -> switch (lookupTree(var2ind, v)) {
+		Some(i): i;
+		None(): {
+			err.report("var `" + v + "` was not declared");
+			-1;
+		}
+	}
+	bytecode = doProg2bc(prog, var_ind, err);
+	if (isOk(err)) {
+		Some(BcCode(vars, bytecode));
+	} else {
+		None();
+	}
+}
+
+doProg2bc(s: Exp, var_ind: (string) -> int, err: Err) -> [BcComm] {
+	switch (s) {
+		Let(v, e1, e2): {
+			concat3(
+				doExp2bc(e1, var_ind, err),
+				[BcPop(var_ind(v))],
+				doProg2bc(e2, var_ind, err)
+			);
+		}
+		Assign(v, e): {
+			arrayPush(
+				doExp2bc(e, var_ind, err),
+				BcPop(var_ind(v))
+			);
+		}
+		If(c, pos, neg): {
+			if (neg == Seq([])) {
+				pos_code = doProg2bc(pos, var_ind, err);
+				concat(
+					arrayPush(
+						doExp2bc(c, var_ind, err),
+						BcIf(length(pos_code) + 1)
+					),
+					concat(
+						pos_code,
+						doProg2bc(neg, var_ind, err)
+					)
+				);
+			} else {
+				pos_code = doProg2bc(pos, var_ind, err);
+				neg_code = doProg2bc(neg, var_ind, err);
+				concat(
+					arrayPush(
+						doExp2bc(c, var_ind, err),
+						BcIf(length(pos_code) + 2)
+					),
+					concat(
+						arrayPush(pos_code, BcGoto(length(neg_code) + 1)),
+						neg_code
+					)
+				);
+			}
+		}
+		While(c, s1): {
+			cond_code = doExp2bc(c, var_ind, err);
+			s1_code = doProg2bc(s1, var_ind, err);
+			concat(
+				arrayPush(
+					cond_code,
+					BcIf(length(s1_code) + 2)
+				),
+				arrayPush(
+					s1_code,
+					BcGoto(-(length(s1_code) + length(cond_code) + 1))
+				)
+			);
+		}
+		Seq(es): {
+			fold(es, [], \acc, x -> concat(acc, doProg2bc(x, var_ind, err)));
+		}
+		Print(e): {
+			arrayPush(doExp2bc(e, var_ind, err), BcPrint());
+		}
+		Read(v): {
+			[BcRead(var_ind(v))];
+		}
+		default: {
+			err.report("a statement is expected, met:\n" + exp2s(s));
+			[];
+		}
+	}
+}
+
+doExp2bc(e: Exp, var_ind: (string) -> int, err: Err) -> [BcComm] {
+	make_op = \op, arity ->
+		if (arity == 1) BcUn(op) else 
+		if (arity == 2) BcBin(op) else {
+			err.report("all operations must be unary or binary, got:\n" + exp2s(e));
+			BcUn(op);
+		}
+	switch (e) {
+		Call(op, args): {
+			arrayPush(
+				foldr(args, [], \acc, arg -> concat(acc, doExp2bc(arg, var_ind, err))),
+				make_op(op, length(args))
+			);
+		}
+		Var(v):  [BcPush(var_ind(v))];
+		Int(i):  [BcConst(i)];
+		Bool(b): [BcConst(b2i(b))];
+		default: {
+			err.report("statement is met in expression:\n" + exp2s(e)); [];
+		}
+	}
+}
+

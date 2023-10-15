@@ -1,0 +1,71 @@
+prog = ws stat;
+
+stat = "if" ws exp stat "else" ws stat $"ifelse" 
+	| "if" ws exp stat $"if"
+	| "while" ws exp stat $"while"
+	| "let" ws id "=" ws exp stat $"let"
+	| "{" ws stats "}" ws $"seq"
+	| id "=" ws exp $"assign"
+	| "print" ws exp $"print_"
+	| "read" ws id $"read"
+	;
+
+stats = $"list" stat $"cons" (stat $"cons")* | $"list";
+
+exp = exp "||" ws exp $"||"
+	|> exp "&&" ws exp $"&&"
+	|> exp "==" ws exp $"==" | exp "!=" ws exp $"!="
+	|> exp ("<=" ws exp $"<=" | "<" ws exp $"<" | ">=" ws exp $">=" | ">" ws exp $">")
+	|> exp < ("+" ws exp $"+" | "-" ws exp ws $"-")*
+	|> exp ("*" ws exp $"*" | "/" ws exp $"/" | "%" ws exp $"%")*
+
+	|> exp ("[" ws exp "]" ws $"index")+ 
+	|> exp ("." ws exp $"dot")+
+	|> exp "?" ws exp ":" ws exp $"ifelse"
+
+	|> (
+		'-' ws exp $"neg"
+		| '!' ws exp $"not"
+	)
+
+	|> (
+		//"if" ws exp exp "else" ws exp $"ifelse" 
+		//| "if" ws exp exp $"if"
+		//| "while" ws exp exp $"while"
+		//| id "=" ws exp $"assign"
+		"(" ws exp ")" ws 
+		//| "print" ws exp $"print_"
+		| "true" ws $"true"
+		| "false" ws $"false"
+		| string ws $"unescape"
+		| int ws $"s2i"
+		| "[" ws exps_commas "]" ws
+		//| "{" ws exps_list "}" ws $"seq"
+		| id $"var"
+	);
+
+exps_commas = $"list" exp $"cons" ("," ws exp $"cons")* ("," ws)? | $"list";
+exps_semis = $"list" exp $"cons" (";" ws exp $"cons")* | $"list";
+exps_list = $"list" exp $"cons" (exp $"cons")* | $"list";
+
+string = $('"' onechar_* '"') ws;
+
+onechar_ = backslash escapedchar_
+	| !'"' !backslash anychar;
+
+escapedchar_ = backslash | '"' | "n" | "t" | "r";
+backslash = '\';
+anychar = '0x0000'-'0xffff';
+
+id = $(firstid restid*) ws;
+
+firstid = 'a' - 'z' | 'A' - 'Z' | '_';
+restid = firstid | '0'-'9';
+
+int = $'0'-'9'+;
+
+ws = s*;
+s = " " | "\t" | "\n" | "\r" | comment;
+comment = "//" (!"\n" anychar)* | "/*" (!"*/" anychar)* "*/";
+
+prog

@@ -1,0 +1,32 @@
+import net/url_parameter;
+import fs/filesystem;
+import parser;
+import typecheck;
+import exp2bc;
+
+main() {
+	file = getUrlParameter("exec");
+	if (file == "") {
+		println("no file to run. Please pass file name with exec=<file> option.")
+	} else if (!fileExists(file)) {
+		println("file: " + file + " don't exist.");
+	} else {
+		code = getFileContent(file);
+		err = makeErr();
+		maybeApply(parse(code, err), \prog -> {
+			maybeApply(typecheck(prog, err), \typed -> {
+				if (isUrlParameterTrue("show-parsed") || isUrlParameterTrue("show-all")) {
+					println("program:\n" + exp2s(typed));
+				}
+				maybeApply(prog2bc(typed, err), \bytecode -> {
+						if (isUrlParameterTrue("show-bytecode") || isUrlParameterTrue("show-all")) {
+							println(bcode2s(bytecode));
+						}
+						execBcCode(bytecode, isUrlParameterTrue("trace"), err);
+					}
+				);
+			});
+		});
+	}
+	quit(0);
+}

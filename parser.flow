@@ -1,0 +1,110 @@
+import text/gringo/gringo_interpreter;
+import exp;
+import err;
+
+export {
+	parse(program: string, err: Err) -> Maybe<Exp>;
+}
+
+parse(program: string, err: Err) -> Maybe<Exp> {
+	grammar = "#include simlang.gringo";
+	gterm = prepareGringoParser(grammar, err.report);
+	if (gterm != GEpsilon()) {
+		// OK, parse the program
+		prog = gringoInterpretedParse(program, expTypeAction(err), gterm, Int(0), err.report);
+		if (isOk(err)) {
+			// No parsing errors
+			Some(prog);
+		} else {
+			// Incorrect syntax of a program - failure to parse
+			err.report("Syntax error(s).");
+			None();
+		}
+	} else {
+		err.report("Could not understand grammar");
+		None();
+	}
+}
+
+exp2string(e: Exp, err: Err) -> string {
+	switch (e) {
+		String(s): s;
+		default: { err.report("Expected string"); ""; }
+	}
+}
+
+exp2array(e: Exp, err: Err) -> [Exp] {
+	switch (e) {
+		Array(es): es;
+		default: { err.report("Expected string, got: " + exp2s(e)); []; }
+	}
+}
+
+expTypeAction(err: Err) -> GringoAction<List<Exp>> {
+	gringoTypedAction(
+		// Make a string
+		\s : string -> String(s),
+		// Extract a string from a value (typically a string)
+		\e -> exp2string(e, err),
+		// Construct the basic value
+		\b -> Bool(b),
+		\i -> Int(s2i(i)),
+		\d -> Int(s2i(d)), // We do not have doubles, so just use ints
+		// Construct an empty array
+		\ -> Array([]),
+		// Append an element to an array
+		\h, t -> {
+			switch (t) {
+				Array(es): Array(arrayPush(es, h));
+				default: t;
+			}
+		},
+		getExpOps(err)
+	);
+}
+
+getExpOps(err: Err) -> GringoTypedOperators {
+	un = \op -> Pair(op, \l -> Call(op, [l]));
+	bin = \op -> Pair(op, \l, r -> Call(op, [l, r]));
+	tri = \op -> Pair(op, \l, m, r -> Call(op, [l, m, r]));
+	GringoTypedOperators(
+		// Nullary
+		makeTree(),
+		// A Tree<string, (Exp) -> Exp> of unary operator constructors
+		pairs2tree([
+			un("neg"),
+			un("not"),
+			Pair("print_", \e -> Print(e)),
+			Pair("read", \v -> Read(exp2string(v, err))),
+			Pair("unescape", \e -> {
+				switch (e) {
+					String(t): String(deserializeString(t).first);
+					default: e;
+				}
+			}),
+			Pair("var", \v -> Var(exp2string(v, err))),
+			Pair("seq", \es -> Seq(exp2array(es, err))),
+		]),
+		// A Tree<string, (Exp, Exp) -> Exp> of binary operator constructors
+		pairs2tree([ 
+			bin("||"), bin("&&"),
+			bin("=="), bin("!="),
+			bin("<="), bin("<"), bin(">"), bin(">="),
+			bin("+"), bin("-"), 
+			bin("*"), bin("/"), bin("%"), 
+			bin("index"), bin("dot"),
+			Pair("if", \cond, pos -> If(cond, pos, Seq([]))),
+			Pair("while", \cond, body -> While(cond, body)),
+			Pair("assign", \v, e -> Assign(exp2string(v, err), e)),
+		]),
+		// A Tree<string, (Exp, Exp, Exp) -> Exp> of ternary operator constructors
+		pairs2tree([
+			Pair("ifelse", \cond, pos, neg -> If(cond, pos, neg)),
+			Pair("let", \v, e, body -> Let(exp2string(v, err), e, body)),
+		]),
+		// Quadranary
+		makeTree(),
+		// Stack ops
+		makeTree(),
+	)
+}

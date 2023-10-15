@@ -1,0 +1,28 @@
+import err;
+import exp;
+import bc;
+
+export {
+	typecheck(prog: Exp, err: Err) -> Maybe<Exp>;
+}
+
+typecheck(prog: Exp, err: Err) -> Maybe<Exp> {
+	// Check that all variables are declared exaclty once in each scope
+	iterExp(prog, \x, locals -> switch (x) {
+		Let(v,__,__):
+			if (containsSet(locals, v)) {
+				err.report("var `" + v + "` is already declared");
+			}
+		Assign(v,__):
+			if (!containsSet(locals, v)) {
+				err.report("var `" + v + "` is not declared in: " + exp2s(x));
+			}
+		Var(v): {
+			if (!containsSet(locals, v)) {
+				err.report("var `" + v + "` is not declared in: " + exp2s(x));
+			}
+		}
+		default: {}
+	}, false);
+	if (isOk(err)) Some(prog) else None();
+}
