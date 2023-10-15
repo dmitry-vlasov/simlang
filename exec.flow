@@ -5,11 +5,12 @@ import string_utils;
 import sys/system;
 import err;
 import bc;
+import io;
 import util;
 
 export {
 
-execBcCode(prog: BcCode, trace: bool, err: Err) -> void;
+execBcCode(prog: BcCode, trace: bool, err: Err, io: Io) -> void;
 
 bcode2s(prog: BcCode) -> string;
 
@@ -40,7 +41,7 @@ verifyBcCode(prog: BcCode, err: Err) -> bool {
 	isOk(err);
 }
 
-execBcCode(prog: BcCode, trace: bool, err: Err) -> void {
+execBcCode(prog: BcCode, trace: bool, err: Err, io: Io) -> void {
 	if (verifyBcCode(prog, err)) {
 		initial = State(
 			generate(0, prog.locals, \__ -> ValInt(0)), 
@@ -52,7 +53,7 @@ execBcCode(prog: BcCode, trace: bool, err: Err) -> void {
 		ignore(for(initial,
 			\s -> isOk(err) && s.pc < length(prog.code),
 			\prev -> {
-				next = execComm(prog.code[prev.pc], prev, err);
+				next = execComm(prog.code[prev.pc], prev, err, io);
 				if (trace) {
 					println(comm2s(prog.code[prev.pc]) + ":\n\t" + state2s(next));
 				}
@@ -62,7 +63,7 @@ execBcCode(prog: BcCode, trace: bool, err: Err) -> void {
 	}
 }
 
-execComm(comm:  BcComm, s: State, err: Err) -> State {
+execComm(comm:  BcComm, s: State, err: Err, io: Io) -> State {
 	incPc = \x -> State(x with pc = x.pc + 1);
 	push = \x, v -> State(x with stack = Cons(v, x.stack));
 	pop = \x -> switch (x.stack) {
@@ -79,17 +80,17 @@ execComm(comm:  BcComm, s: State, err: Err) -> State {
 		}
 		BcPrint(): {
 			p = pop(s);
-			println(val2s(p.first));
+			io.out(val2s(p.first));
 			incPc(p.second);
 		}
 		BcReadBool(i): {
-			incPc(State(s with vars = replace(s.vars, i, ValBool(s2b(readUntil("\n"))))));
+			incPc(State(s with vars = replace(s.vars, i, ValBool(s2b(io.in())))));
 		}
 		BcReadInt(i): {
-			incPc(State(s with vars = replace(s.vars, i, ValInt(s2i(readUntil("\n"))))));
+			incPc(State(s with vars = replace(s.vars, i, ValInt(s2i(io.in())))));
 		}
 		BcReadString(i): {
-			incPc(State(s with vars = replace(s.vars, i, ValString(readUntil("\n")))));
+			incPc(State(s with vars = replace(s.vars, i, ValString(io.in()))));
 		}
 		BcIf(sh): {
 			p = pop(s);

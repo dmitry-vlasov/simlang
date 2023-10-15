@@ -1,0 +1,38 @@
+import sys/process;
+import fs/filesystem;
+import net/url_parameter;
+import text/blueprint;
+
+runTest(file: string, err: bool) -> bool {
+	out = execSystemProcessOutput("java", [
+		"-jar", "simlang.jar", "exec=" + file, "show-all=1",
+		"in=5,5,5,5"
+	], ".");
+	if (isUrlParameterTrue("show-out")) {
+		println("Test: " + file + "\n---------------------------\n" + out.stdall);
+	} 
+	success = !strContains(out.stdall, "error") || err;
+	if (success) {
+		println("Test: " + file + " PASSED");
+	} else {
+		println("Test: " + file + " FAILED:\n" + out.stdall);
+	}
+	success;
+}
+
+main() {
+	tests_dir = getUrlParameterDef("tests", "tests");
+	test_files = filter(readDirectory(tests_dir), \f -> endsWith(f, ".sl"));
+	println("going to run tests:\n" + superglue(test_files, \f -> "\t" + f, "\n"));
+	failed = fold(test_files, [], \acc, file -> {
+		name = changeFileExt(fileNameOnly(file), "");
+		err = endsWith(name, "_err");
+		if (runTest(pathCombine(tests_dir, file), err)) acc else arrayPush(acc, file);
+	});
+	if (failed == []) {
+		println("All tests pass successfully :)");
+	} else {
+		println("Failed tests:\n" + superglue(failed, \f -> "\t" + f, "\n"));
+	}
+	quit(0);
+}
