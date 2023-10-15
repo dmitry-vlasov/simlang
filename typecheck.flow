@@ -1,7 +1,7 @@
 import err;
 import exp;
 import texp;
-import bc;
+import bytecode;
 import util;
 
 export {

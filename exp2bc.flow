@@ -1,6 +1,6 @@
 import err;
 import texp;
-import bc;
+import bytecode;
 import util;
 
 export {

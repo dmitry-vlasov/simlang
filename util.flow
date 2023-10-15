@@ -2,7 +2,7 @@ import string_utils;
 import text/blueprint;
 import exp;
 import texp;
-import bc;
+import bytecode;
 
 export {
 

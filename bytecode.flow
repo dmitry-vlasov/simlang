@@ -1,0 +1,38 @@
+import type;
+
+export {
+
+// Bytecode commands
+BcComm ::=
+	BcPush, BcPop, BcPrint, BcReadBool, BcReadInt, BcReadString, BcIfNot,
+	BcGoto, BcOp, BcConstBool, BcConstInt, BcConstString;
+
+	// stack <-> locals operations
+	BcPush(i: int); // Here `i` is an index of some local variable, which value is pushed onto stack
+	BcPop(i: int);  // Here `i` is an index of some local variable, which is set to the value popped from stack
+
+	// Control flow operations
+	BcGoto(sh: int);  // Unconditional jump: shifts the program counter by `sh`
+	BcIfNot(sh: int); // Conditional jump: shifts the program counter, if boolean value on a stack is false.
+
+	// input/output commands
+	BcReadBool(i: int);    // Sets the `i`-th variable value to the boolean value from input
+	BcReadInt(i: int);     // Sets the `i`-th variable value to the integer value from input
+	BcReadString(i: int);  // Sets the `i`-th variable value to the string value from input
+	BcPrint();             // Prints the value, popped from the top of the stack
+
+	// Stack operation. `op` denotes the exact operation.
+	BcOp(op: string, arity: int); // op may be: '+' , '-', '*', 'i2s',... etc.
+
+	// Constants (are pushed onto stack):
+	BcConstBool(b: bool);
+	BcConstInt(v: int);
+	BcConstString(s: string);
+
+// The whole bytecode representation
+BcCode(
+	locals: int,    // number of local variables, used in a program
+	code: [BcComm], // sequence of commands
+);
+
+}

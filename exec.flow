@@ -4,7 +4,7 @@ import text/blueprint;
 import string_utils;
 import sys/system;
 import err;
-import bc;
+import bytecode;
 import io;
 import util;
 
