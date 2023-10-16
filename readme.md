@@ -3,7 +3,7 @@ Simple language (simlang)
 
 Main purpose of this language is educational - as a simple example of a compiler -> bytecode -> executor toolchain.
 
-This simlang features:
+The main simlang features:
 * Basic types: integer, boolean and string
 * assignment to local variables, i.e. `a = 5`
 * basic arithmetc operations (`+`, `-`, `*`, `/`, `%`), comparison (`<`, `>`, `<=`, `>=`, `==`, `!=`), boolean operators (`!`, `&&`, `||`)
