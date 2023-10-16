@@ -74,6 +74,11 @@ To run a test suite (execute all test files from ``tests` folder):
 To run all tests with their output:
 `java -jar test_runner.jar show-out=1`
 
+Build
+-----
+To build simlang toolchan use (flowc1 must be installed in the system):
+`flowc1 jar=1 simc; flowc1 jar=1 sime; flowc1 jar=1 test_runner`
+
 Dependencies
 ------------
 java runtime (jre) to run, java compiler (11 or higher) to compile, installation of flow9 to modify/examine code.
