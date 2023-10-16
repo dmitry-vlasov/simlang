@@ -68,7 +68,7 @@ To trace the execution of a program:
 
 Tests
 -----
-To run a test suite (execute all test files from ``tests` folder):
+To run a test suite (execute all test files from `tests` folder):
 `java -jar test_runner.jar`
 
 To run all tests with their output:
