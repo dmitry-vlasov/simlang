@@ -24,7 +24,7 @@ export {
 		BcConstBool   9
 		BcConstInt    10
 		BcConstString 11
-		BcStackOp          12
+		BcStackOp     12
 
 	special case - BcStackOp. It has itself operation from the list:
 		not, neg, +, -, *, /, %, ==, !=, <=, <, >=, >, &&, ||, 
