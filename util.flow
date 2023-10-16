@@ -46,7 +46,9 @@ exp2s(e: Exp) -> string {
 		Call(op, args): {
 			if (length(args) == 0) op else
 			if (length(args) == 1) {
-				op + exp2s(args[0]);
+				if (op == "not") "!" + exp2s(args[0]) else
+				if (op == "neg") "-" + exp2s(args[0]) else
+				op + "(" + exp2s(args[0]) + ")";
 			} else {
 				"(" + superglue(args, exp2s, " " + op + " ") + ")";
 			}

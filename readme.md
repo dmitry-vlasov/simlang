@@ -73,6 +73,9 @@ To run a test suite (execute all test files from ``tests` folder):
 
 To run all tests with their output:
 `java -jar test_runner.jar show-out=1`
+In this case checks on errors are not performed, just output is flushed onto stdout.
+
+Tests which end on `_err` must cause compilation errors, this is considered as a success of a test.
 
 Build
 -----

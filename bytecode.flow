@@ -25,7 +25,7 @@ BcComm ::=
 	// Stack operation. `op` denotes the exact operation.
 	BcStackOp(op: string); // op may be: '+' , '-', '*', 'i2s',... etc.
 
-	// List of all operators, which may be in BcStackOp. The second component of pair is arity of an operation.
+	// List of all operators, which may be in BcStackOp. The second component of a pair is arity of an operation.
 	bytecode_ops = [
 		Pair("not", 1), Pair("neg", 1), Pair("+", 2),   Pair("-", 2),   Pair("*", 2),   Pair("/", 2),   Pair("%", 2), 
 		Pair("==", 2),  Pair("!=", 2),  Pair("<=", 2),  Pair("<", 2),   Pair(">=", 2),  Pair(">", 2),   Pair("&&", 2),

@@ -5,23 +5,30 @@ import text/blueprint;
 
 runTest(file: string, err: bool) -> bool {
 	// Compile to bytecode
-	out_c = execSystemProcessOutput("java", ["-jar", "simc.jar", "file=" + file, "show-all=1"], ".");
+	out_c = execSystemProcessOutput("java", [
+		"-jar", "simc.jar", "file=" + file, 
+		"show-all=" + if (isUrlParameterTrue("show-out")) "1" else "0"
+	], ".");
 	// Execute the bytecode
 	out_e = execSystemProcessOutput("java", [
 		"-jar", "sime.jar", "file=" + changeFileExt(file, ".binsl"),
 		"in=5,5,5,5,5" // To keep it simple - pass as input always 5
 	], ".");
 	if (isUrlParameterTrue("show-out")) {
+		// In case of 'show-out' mode we can't check for errors since the code of programs, which is 
+		// put into stdall may contain "error:" string.
 		println("Test: " + file + "\n---------------------------\n" + out_c.stdall + "\n" + out_e.stdall);
-	}
-	// If an error is expected - it must happen:
-	success = strContains(out_c.stdall + out_e.stdall, "error:") == err;
-	if (success) {
-		println("Test: " + file + " PASSED");
+		true
 	} else {
-		println("Test: " + file + " FAILED:\n" + out_c.stdall + "\n" + out_e.stdall);
+		// If an error is expected - it must happen:
+		success = strContains(out_c.stdall + out_e.stdall, "error:") == err;
+		if (success) {
+			println("Test: " + file + " PASSED");
+		} else {
+			println("Test: " + file + " FAILED (err: " + b2s(err) + "):\n" + out_c.stdall + "\n" + out_e.stdall);
+		}
+		success;
 	}
-	success;
 }
 
 main() {
@@ -33,10 +40,14 @@ main() {
 		err = endsWith(name, "_err");
 		if (runTest(pathCombine(tests_dir, file), err)) acc else arrayPush(acc, file);
 	});
-	if (failed == []) {
-		println("All tests pass successfully :)");
+	if (isUrlParameterTrue("show-out")) {
+		println("All tests are run. To check on errors re-run with show-out=0 option");
 	} else {
-		println("Failed tests:\n" + superglue(failed, \f -> "\t" + f, "\n"));
+		if (failed == []) {
+			println("\nAll tests passed successfully :)");
+		} else {
+			println("Failed tests:\n" + superglue(failed, \f -> "\t" + f, "\n"));
+		}
 	}
 	quit(0);
 }
