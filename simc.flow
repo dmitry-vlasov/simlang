@@ -2,7 +2,7 @@ import net/url_parameter;
 import fs/filesystem;
 import parser;
 import typecheck;
-import prog2bc;
+import compile;
 import binary;
 
 main() {
