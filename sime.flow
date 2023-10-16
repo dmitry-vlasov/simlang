@@ -1,0 +1,50 @@
+import net/url_parameter;
+import fs/filesystem;
+import exec;
+
+main() {
+	file = getUrlParameter("file");
+	if (file == "") {
+		println(help + "\nno file to run. Please pass file name with file=<name> option.")
+	} else if (!fileExists(file)) {
+		println("file: " + file + " don't exist.");
+	} else {
+		in_param = getUrlParameter("in");
+		io = if (in_param == "") {
+			Io(\ -> readUntil("\n"), println);
+		} else {
+			// When tests are run automatically, we need to mock the used input.
+			// So, the 'user input' is passed via 'in=<s_1>,<s_2>,...,<s_n>' option
+			in_seq = strSplit(in_param, ",");
+			in_counter = ref 0;
+			Io(
+				\ -> if (^in_counter >= length(in_seq)) "" else {
+					s = in_seq[^in_counter];
+					in_counter := ^in_counter + 1;
+					s;
+				},
+				println
+			)
+		}
+		err = makeErr();
+		binary = getFileContent(file);
+		// Decode the binary representation of a bytecode.
+		switch (binary2bytecode(binary, err)) {
+			Some(bytecode): {
+				// Going to run program ...
+				execBcCode(bytecode, isUrlParameterTrue("trace"), err, io);
+			}
+			None(): {} // Bytecode was not successfully decoded.
+		}
+	}
+	quit(0);
+}
+
+help = <<
+Simple language runner. Usage:
+	java -jar sime.jar <options> file=<name>
+
+Options:
+	trace=1                    trace the exceution of bytecode
+	in=<s_1>,<s_2>,...,<s_n>   mock the input by providing it with s_1,s_2,...,s_n values
+>>

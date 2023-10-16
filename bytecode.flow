@@ -24,6 +24,13 @@ BcComm ::=
 	// Stack operation. `op` denotes the exact operation.
 	BcOp(op: string, arity: int); // op may be: '+' , '-', '*', 'i2s',... etc.
 
+	// List of all operators, which may be in BcOp
+	bytecode_ops = [
+		"not", "neg", "+", "-", "*", "/", "%", 
+		"==", "!=", "<=", "<", ">=", ">", "&&", "||", 
+		"i2b", "i2s", "b2s", "b2i", "s2i", "s2b"
+	];
+
 	// Constants (are pushed onto stack):
 	BcConstBool(b: bool);
 	BcConstInt(v: int);
