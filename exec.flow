@@ -70,6 +70,12 @@ execBcCode(prog: BcCode, trace: bool, err: Err, io: Io) -> void {
 	}
 }
 
+op_arities: ref Maybe<Tree<string, int>> = ref None();
+
+opArity() -> Tree<string, int> {
+	onlyOnce(op_arities, \-> pairs2tree(bytecode_ops));
+}
+
 execComm(comm:  BcComm, s: State, err: Err, io: Io) -> State {
 	// Increment the program counter.
 	incPc = \x -> State(x with pc = x.pc + 1);
@@ -138,7 +144,9 @@ execComm(comm:  BcComm, s: State, err: Err, io: Io) -> State {
 			// Push a constant string value onto the stack.
 			incPc(push(s, ValString(s1)));
 		}
-		BcOp(op, arity): {
+		BcStackOp(op): {
+			// Find the operation arity
+			arity = lookupTreeDef(opArity(), op, 0);
 			// Pop arguments from stack 'arity' times and collect them on the second component of triple.
 			// The first component of a triple is state after popping args.
 			t = for(Triple(s, [], 0),

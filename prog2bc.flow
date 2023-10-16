@@ -135,7 +135,7 @@ exp2bc(e: TExp, var_ind: (string) -> int, err: Err) -> [BcComm] {
 				// Note! here arguments are reversed (i.e. foldr function is used).
 				// Otherwise the order of oerations will be reversed during the execution.
 				foldr(args, [], \acc, arg -> concat(acc, exp2bc(arg, var_ind, err))),
-				BcOp(op, length(args))
+				BcStackOp(op)
 			);
 		}
 		TVar(v,__): [BcPush(var_ind(v))]; // Push the value of a local variable 'v' onto the stack

@@ -7,11 +7,11 @@ import binary;
 
 main() {
 	file_param = getUrlParameter("file");
-	file = changeFileExt(file_param, ".sl");
+	file = if (fileExists(file_param)) file_param else changeFileExt(file_param, ".sl");
 	if (file_param == "") {
 		println(help + "\nno file to compile. Please pass file name with file=<name> option.")
 	} else if (!fileExists(file)) {
-		println("file: " + file_param + " don't exist.");
+		println("file: " + file + " don't exist.");
 	} else {
 		code = getFileContent(file);
 		err = makeErr();

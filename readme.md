@@ -47,10 +47,10 @@ extension for flow9.
 Usage
 -----
 Command line to invoke a compiler:
-`java -jar simlang.jar`
+`java -jar simc.jar`
 
-To compile and run a particular file:
-`java -jar simlang.jar file=tests/sqrt`
+To run a particular file (compiled bytecode):
+`java -jar sime.jar file=tests/sqrt`
 
 To see all intermediate stages of compilation:
 `java -jar simlang.jar file=tests/sqrt show-all=1`

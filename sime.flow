@@ -4,8 +4,9 @@ import exec;
 import binary;
 
 main() {
-	file = getUrlParameter("file");
-	if (file == "") {
+	file_param = getUrlParameter("file");
+	file = if (fileExists(file_param)) file_param else changeFileExt(file_param, ".binsl");
+	if (file_param == "") {
 		println(help + "\nno file to run. Please pass file name with file=<name> option.")
 	} else if (!fileExists(file)) {
 		println("file: " + file + " don't exist.");

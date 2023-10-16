@@ -1,37 +1,38 @@
 import type;
+import ds/tuples;
 
 export {
 
-// Bytecode commands
+// Bytecode (stack-based) commands.
 BcComm ::=
 	BcPush, BcPop, BcPrint, BcReadBool, BcReadInt, BcReadString, BcIfNot,
-	BcGoto, BcOp, BcConstBool, BcConstInt, BcConstString;
+	BcGoto, BcStackOp, BcConstBool, BcConstInt, BcConstString;
 
 	// stack <-> locals operations
-	BcPush(i: int); // Here `i` is an index of some local variable, which value is pushed onto stack
-	BcPop(i: int);  // Here `i` is an index of some local variable, which is set to the value popped from stack
+	BcPush(i: int); // Pushes the value of `i`-th variable onto the stack.
+	BcPop(i: int);  // Pops the top of the stack into the `i`-th variable.
 
 	// Control flow operations
 	BcGoto(sh: int);  // Unconditional jump: shifts the program counter by `sh`
-	BcIfNot(sh: int); // Conditional jump: shifts the program counter, if boolean value on a stack is false.
+	BcIfNot(sh: int); // Conditional jump: shifts the program counter, if boolean value on a stack is false (sic!).
 
-	// input/output commands
+	// input / output commands
 	BcReadBool(i: int);    // Sets the `i`-th variable value to the boolean value from input
 	BcReadInt(i: int);     // Sets the `i`-th variable value to the integer value from input
 	BcReadString(i: int);  // Sets the `i`-th variable value to the string value from input
 	BcPrint();             // Prints the value, popped from the top of the stack
 
 	// Stack operation. `op` denotes the exact operation.
-	BcOp(op: string, arity: int); // op may be: '+' , '-', '*', 'i2s',... etc.
+	BcStackOp(op: string); // op may be: '+' , '-', '*', 'i2s',... etc.
 
-	// List of all operators, which may be in BcOp
+	// List of all operators, which may be in BcStackOp. The second component of pair is arity of an operation.
 	bytecode_ops = [
-		"not", "neg", "+", "-", "*", "/", "%", 
-		"==", "!=", "<=", "<", ">=", ">", "&&", "||", 
-		"i2b", "i2s", "b2s", "b2i", "s2i", "s2b"
+		Pair("not", 1), Pair("neg", 1), Pair("+", 2),   Pair("-", 2),   Pair("*", 2),   Pair("/", 2),   Pair("%", 2), 
+		Pair("==", 2),  Pair("!=", 2),  Pair("<=", 2),  Pair("<", 2),   Pair(">=", 2),  Pair(">", 2),   Pair("&&", 2),
+		Pair("||", 2),  Pair("i2b", 1), Pair("i2s", 1), Pair("b2s", 1), Pair("b2i", 1), Pair("s2i", 1), Pair("s2b", 1),
 	];
 
-	// Constants (are pushed onto stack):
+	// Constants (push onto the stack):
 	BcConstBool(b: bool);
 	BcConstInt(v: int);
 	BcConstString(s: string);

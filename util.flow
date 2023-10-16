@@ -144,7 +144,7 @@ comm2s(comm: BcComm) -> string {
 		BcConstBool(b):   "const bool " + b2s(b);
 		BcConstInt(i):    "const int " + i2s(i);
 		BcConstString(s): "const string \"" + s + "\"";
-		BcOp(op, a):      "op " + op + ": " + i2s(a);
+		BcStackOp(op):    "op " + op;
 	}
 }
 

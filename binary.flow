@@ -24,15 +24,15 @@ export {
 		BcConstBool   9
 		BcConstInt    10
 		BcConstString 11
-		BcOp          12
+		BcStackOp          12
 
-	special case - BcOp. It has itself operation from the list:
+	special case - BcStackOp. It has itself operation from the list:
 		not, neg, +, -, *, /, %, ==, !=, <=, <, >=, >, &&, ||, 
 		i2b, i2s, b2s, b2i, s2i, s2b
 		which is represented by a byte with its number in this list.
 
-		So, BcOp:
-			operation id (one byte) + arity (one byte)
+		So, BcStackOp:
+			operation id (one byte)
 
 4) BcCode(locals: int, code: [BcComm]): 
 	locals (int value) + secuence of command codes from code.
@@ -48,7 +48,7 @@ binary2bytecode(b: string, err: Err) -> Maybe<BcCode>;
 }
 
 bcode2binary(prog: BcCode) -> string {
-	op2bin = foldi(bytecode_ops, makeTree(), \i, acc, s -> setTree(acc, s, fromCharCode(i)));
+	op2bin = foldi(bytecode_ops, makeTree(), \i, acc, p -> setTree(acc, p.first, fromCharCode(i)));
 	int2binary(prog.locals) + fold(prog.code, "", \acc, com ->
 		acc + switch (com) {
 			BcPush(i):        fromCharCode(1) + int2binary(i);
@@ -62,7 +62,7 @@ bcode2binary(prog: BcCode) -> string {
 			BcConstBool(b):   fromCharCode(9)  + fromCharCode(b2i(b));
 			BcConstInt(i):    fromCharCode(10) + int2binary(i);
 			BcConstString(s): fromCharCode(11) + int2binary(strlen(s)) + s;
-			BcOp(op, arity):  fromCharCode(12) + lookupTreeDef(op2bin, op, "") + fromCharCode(arity);
+			BcStackOp(op):    fromCharCode(12) + lookupTreeDef(op2bin, op, "");
 		}
 	);
 }
@@ -83,8 +83,7 @@ binary2int(b: string, pos: int) -> int {
 
 binary2bytecode(b: string, err: Err) -> Maybe<BcCode> {
 	locals = binary2int(b, 0);
-	println("locals: " + i2s(locals));
-	bin2op = foldi(bytecode_ops, makeTree(), \i, acc, s -> setTree(acc, i, s));
+	bin2op = foldi(bytecode_ops, makeTree(), \i, acc, p -> setTree(acc, i, p.first));
 	maybeMap(doBinary2bytecode(b, 4, [], bin2op, err), \code -> BcCode(locals, code));
 }
 
@@ -117,8 +116,7 @@ doBinary2bytecode(b: string, i: int, acc: [BcComm], bin2op: Tree<int, string>, e
 			doBinary2bytecode(b, i + 5 + len, arrayPush(acc, BcConstString(str)), bin2op, err);
 		} else if (com_id == 12) {
 			op = lookupTreeDef(bin2op, getCharCodeAt(b, i + 1), "");
-			arity = getCharCodeAt(b, i + 2);
-			doBinary2bytecode(b, i + 3, arrayPush(acc, BcOp(op, arity)), bin2op, err);
+			doBinary2bytecode(b, i + 2, arrayPush(acc, BcStackOp(op)), bin2op, err);
 		} else {
 			err.report("failed to decode binary simlang bytecode");
 			None();
