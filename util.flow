@@ -125,7 +125,7 @@ texp2s(e: TExp) -> string {
 }
 
 bcode2s(prog: BcCode) -> string {
-	"locals: " + i2s(prog.locals) + "\n" + 
+	"number of locals: " + i2s(prog.numLocals) + "\n" + 
 	"bytecode: [\n" +
 		supergluei(prog.code, \i, c -> "\t" + i2s(i) + ": " + comm2s(c), "\n") + 
 	"\n]";

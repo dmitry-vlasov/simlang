@@ -31,7 +31,7 @@ State(
 
 // Check that all locals indexes, used in bytecode are within boundaries.
 verifyBcCode(prog: BcCode, err: Err) -> bool {
-	check_i = \i, c -> if (i < 0 || i >= prog.locals) {
+	check_i = \i, c -> if (i < 0 || i >= prog.numLocals) {
 		err.report("illegal var index in: " + comm2s(c));
 	}
 	iter(prog.code, \c -> switch (c) {
@@ -49,7 +49,7 @@ execBcCode(prog: BcCode, trace: bool, err: Err, io: Io) -> void {
 	if (verifyBcCode(prog, err)) {
 		initial = State(
 			// All variables initially are set to some default values - no matter which particularily.
-			generate(0, prog.locals, \__ -> ValInt(0)), 
+			generate(0, prog.numLocals, \__ -> ValInt(0)), 
 			0, makeList()
 		);
 		if (trace) {

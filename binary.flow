@@ -49,7 +49,7 @@ binary2bytecode(b: string, err: Err) -> Maybe<BcCode>;
 
 bcode2binary(prog: BcCode) -> string {
 	op2bin = foldi(bytecode_ops, makeTree(), \i, acc, p -> setTree(acc, p.first, fromCharCode(i)));
-	int2binary(prog.locals) + fold(prog.code, "", \acc, com ->
+	int2binary(prog.numLocals) + fold(prog.code, "", \acc, com ->
 		acc + switch (com) {
 			BcPush(i):        fromCharCode(1) + int2binary(i);
 			BcPop(i):         fromCharCode(2) + int2binary(i);
