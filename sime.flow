@@ -1,6 +1,7 @@
 import net/url_parameter;
 import fs/filesystem;
 import exec;
+import binary;
 
 main() {
 	file = getUrlParameter("file");

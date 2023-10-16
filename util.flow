@@ -21,12 +21,6 @@ comm2s(comm: BcComm) -> string;
 // Gather all variables from TExp
 texpVars(acc: Set<string>, e: TExp) -> Set<string>;
 
-// Encode a program in a binary format
-bcode2binary(prog: BcCode) -> string;
-
-// Decode a program from binary string
-binary2bytecode(b: string, err: Err) -> Maybe<BcCode>;
-
 }
 
 type2s(t: Type) -> string {
@@ -161,85 +155,5 @@ texpVars(acc: Set<string>, e: TExp) -> Set<string> {
 		TWhile(__,body):   texpVars(acc, body);
 		TIf(__, pos, neg): texpVars(texpVars(acc, pos), neg);
 		default: acc;
-	}
-}
-
-bcode2binary(prog: BcCode) -> string {
-	op2bin = foldi(bytecode_ops, makeTree(), \i, acc, s -> setTree(acc, s, fromCharCode(i)));
-	int2binary(prog.locals) + fold(prog.code, "", \acc, com ->
-		acc + switch (com) {
-			BcPush(i):        fromCharCode(1) + int2binary(i);
-			BcPop(i):         fromCharCode(2) + int2binary(i);
-			BcGoto(sh):       fromCharCode(3) + int2binary(sh);
-			BcIfNot(sh):      fromCharCode(4) + int2binary(sh);
-			BcReadBool(i):    fromCharCode(5) + int2binary(i);
-			BcReadInt(i):     fromCharCode(6) + int2binary(i);
-			BcReadString(i):  fromCharCode(7) + int2binary(i);
-			BcPrint():        fromCharCode(8);
-			BcConstBool(b):   fromCharCode(9) + int2binary(b2i(b));
-			BcConstInt(i):    fromCharCode(10) + int2binary(i);
-			BcConstString(s): fromCharCode(11) + int2binary(strlen(s)) + s;
-			BcOp(op, arity):  fromCharCode(12) + fromCharCode(arity) + lookupTreeDef(op2bin, op, "");
-		}
-	);
-}
-
-int2binary(value : int) -> string {
-	fromCharCode(bitAnd(value, 0xFF)) +
-	fromCharCode(bitAnd(bitUshr(value, 8), 0xFF))+
-	fromCharCode(bitAnd(bitUshr(value, 16), 0xFF))+
-	fromCharCode(bitAnd(bitUshr(value, 24), 0xFF));
-}
-
-binary2int(b: string, pos: int) -> int {
-	getCharCodeAt(b, pos) +
-	bitShl(getCharCodeAt(b, pos + 1), 8) +
-	bitShl(getCharCodeAt(b, pos + 2), 16) +
-	bitShl(getCharCodeAt(b, pos + 3), 24);
-}
-
-binary2bytecode(b: string, err: Err) -> Maybe<BcCode> {
-	locals = binary2int(b, 0);
-	println("locals: " + i2s(locals));
-	bin2op = foldi(bytecode_ops, makeTree(), \i, acc, s -> setTree(acc, i, s));
-	maybeMap(doBinary2bytecode(b, 4, [], bin2op, err), \code -> BcCode(locals, code));
-}
-
-doBinary2bytecode(b: string, i: int, acc: [BcComm], bin2op: Tree<int, string>, err: Err) -> Maybe<[BcComm]> {
-	if (i == strlen(b)) Some(acc) else {
-		com_id = getCharCodeAt(b, i);
-		println("i = " + i2s(i) + ", com_id = '" + i2s(com_id) + "'");
-		if (com_id == 1) {
-			doBinary2bytecode(b, i + 5, arrayPush(acc, BcPush(binary2int(b, i + 1))), bin2op, err);
-		} else if (com_id == 2) {
-			doBinary2bytecode(b, i + 5, arrayPush(acc, BcPop(binary2int(b, i + 1))), bin2op, err);
-		} else if (com_id == 3) {
-			doBinary2bytecode(b, i + 5, arrayPush(acc, BcGoto(binary2int(b, i + 1))), bin2op, err);
-		} else if (com_id == 4) {
-			doBinary2bytecode(b, i + 5, arrayPush(acc, BcIfNot(binary2int(b, i + 1))), bin2op, err);
-		} else if (com_id == 5) {
-			doBinary2bytecode(b, i + 5, arrayPush(acc, BcReadBool(binary2int(b, i + 1))), bin2op, err);
-		} else if (com_id == 6) {
-			doBinary2bytecode(b, i + 5, arrayPush(acc, BcReadInt(binary2int(b, i + 1))), bin2op, err);
-		} else if (com_id == 7) {
-			doBinary2bytecode(b, i + 5, arrayPush(acc, BcReadString(binary2int(b, i + 1))), bin2op, err);
-		} else if (com_id == 8) {
-			doBinary2bytecode(b, i + 1, arrayPush(acc, BcPrint()), bin2op, err);
-		} else if (com_id == 9) {
-			doBinary2bytecode(b, i + 5, arrayPush(acc, BcConstBool(i2b(binary2int(b, i + 1)))), bin2op, err);
-		} else if (com_id == 10) {
-			doBinary2bytecode(b, i + 5, arrayPush(acc, BcConstInt(binary2int(b, i + 1))), bin2op, err);
-		} else if (com_id == 11) {
-			len = binary2int(b, i + 1);
-			str = substring(b, i + 5, len);
-			doBinary2bytecode(b, i + 5 + len, arrayPush(acc, BcConstString(str)), bin2op, err);
-		} else if (com_id == 12) {
-			arity = getCharCodeAt(b, i + 1);
-			op = lookupTreeDef(bin2op, getCharCodeAt(b, i + 2), "");
-			doBinary2bytecode(b, i + 3, arrayPush(acc, BcOp(op, arity)), bin2op, err);
-		} else {
-			err.report("failed to decode binary simlang bytecode");
-			None();
-		}
 	}
 }
