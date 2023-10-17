@@ -18,8 +18,7 @@ exp = exp "||" ws exp $"||"
 	|> exp < ("+" ws exp $"+" | "-" ws exp ws $"-")*
 	|> exp ("*" ws exp $"*" | "/" ws exp $"/" | "%" ws exp $"%")*
 
-	|> exp ("[" ws exp "]" ws $"index")+ 
-	|> exp ("." ws exp $"dot")+
+	|> exp ("[" ws exp "]" ws $"index")+
 	|> exp "?" ws exp ":" ws exp $"ifelse"
 
 	|> (

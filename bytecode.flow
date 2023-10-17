@@ -39,7 +39,7 @@ BcComm ::=
 
 // The whole bytecode representation
 BcCode(
-	numLocals: int,    // number of local variables, used in a program
+	numLocals: int, // number of local variables, used in a program
 	code: [BcComm], // sequence of commands
 );
 

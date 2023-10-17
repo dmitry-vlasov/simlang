@@ -94,7 +94,7 @@ getExpOps(err: Err) -> GringoTypedOperators {
 			bin("<="), bin("<"), bin(">"), bin(">="),
 			bin("+"), bin("-"), 
 			bin("*"), bin("/"), bin("%"), 
-			bin("index"), bin("dot"),
+			bin("index"),
 			Pair("if", \cond, pos -> If(cond, pos, Seq([]))),
 			Pair("while", \cond, body -> While(cond, body)),
 			Pair("assign", \v, e -> Assign(exp2string(v, err), e)),
